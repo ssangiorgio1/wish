@@ -6,13 +6,12 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: 'ClubNight Manager - Sistema de Gestion',
-  description: 'Sistema de gestion de inventario para discotecas y clubes nocturnos',
-  generator: 'v0.app',
+  title: 'BUTIC ',
+  description: 'Sistema de gestion de inventario ',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/icon-dark-32x32.png',
         media: '(prefers-color-scheme: light)',
       },
       {
@@ -20,7 +19,7 @@ export const metadata: Metadata = {
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/icon.svg',
+        url: '/icon-dark-32x32.svg',
         type: 'image/svg+xml',
       },
     ],
