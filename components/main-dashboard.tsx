@@ -16,11 +16,10 @@ export function MainDashboard() {
   const [alertCount, setAlertCount] = useState(0)
   const { user } = useAuth()
 
-  // CORRECCIÓN DEFINITIVA DEL CONTADOR
+  // REFRESCAR CONTADOR DE ALERTAS
   const refreshAlerts = async () => {
     try {
       const alerts = await getAlerts()
-      // Filtramos por el campo CORRECTO: 'leida'
       const unread = alerts.filter((a: any) => a && a.leida === false)
       setAlertCount(unread.length)
     } catch (error) {
@@ -33,6 +32,14 @@ export function MainDashboard() {
     const interval = setInterval(refreshAlerts, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // 🔥 FIX DE SCROLL: Resetear al subir arriba cada vez que cambia la sección
+  useEffect(() => {
+    const mainContent = document.getElementById('main-scroll-container');
+    if (mainContent) {
+      mainContent.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeSection]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -47,8 +54,6 @@ export function MainDashboard() {
       case 'alerts':
         return <AlertsView onRefreshAlerts={refreshAlerts} />
       case 'reports':
-        // Ahora permitimos que todos entren a 'reports', 
-        // ReportsView adentro se encarga de mostrar solo el arqueo si no es owner
         return <ReportsView />
       default:
         return <DashboardView onNavigate={setActiveSection} />
@@ -56,18 +61,23 @@ export function MainDashboard() {
   }
 
   return (
-    <div className="h-screen w-full bg-[#0f172a] flex text-slate-200 selection:bg-indigo-500/30 overflow-hidden font-rounded">
+    // ✅ Corregido: Quitamos el h-full duplicado y dejamos solo 100dvh
+    <div className="h-[100dvh] w-full bg-[#0f172a] flex text-slate-200 selection:bg-indigo-500/30 overflow-hidden font-rounded">
       <Sidebar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         alertCount={alertCount}
       />
 
-      <main className="flex-1 min-h-0 relative flex flex-col">
+      <main className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
         
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative p-4 lg:p-10">
-          <div className="max-w-[1600px] mx-auto min-h-full">
+        {/* ✅ FIX MOBILE: Agregamos touch-pan-y para avisarle al navegador que el scroll vertical es legal */}
+        <div 
+          id="main-scroll-container"
+          className="flex-1 overflow-y-auto custom-scrollbar relative p-0 pt-20 lg:pt-10 lg:p-10 touch-pan-y"
+        >
+          <div className="w-full max-w-[2600px] mx-auto min-h-full px-2 sm:px-0">
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
               {renderContent()}
             </div>
@@ -85,9 +95,12 @@ export function MainDashboard() {
         html, body {
           margin: 0;
           padding: 0;
-          overflow: hidden !important;
+          height: 100dvh;
+          width: 100%;
+          /* ✅ Importante: quitamos el overflow-hidden de acá para que no bloquee al contenedor hijo */
           background-color: #0f172a;
           font-family: var(--font-quicksand) !important;
+          scroll-restoration: manual;
         }
 
         .font-rounded {
@@ -101,6 +114,13 @@ export function MainDashboard() {
           border-radius: 20px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        /* ✅ Liberamos el scroll bloqueado en iOS/Android */
+        .custom-scrollbar {
+          -webkit-overflow-scrolling: touch;
+          /* Quitamos overscroll-behavior-y: none si te sigue fallando */
+          overscroll-behavior-y: contain; 
+        }
       `}</style>
     </div>
   )

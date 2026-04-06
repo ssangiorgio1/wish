@@ -1,5 +1,7 @@
+// ✅ Roles de usuario
 export type RolUsuario = 'owner' | 'employee'
 
+// ✅ Usuario
 export interface Usuario {
   id: string
   username: string
@@ -7,71 +9,77 @@ export interface Usuario {
   name: string
 }
 
-// 1. Actualizamos la receta para usar "cantidadMl" 
+// ✅ Receta: La "fórmula" para Tragos y Combos
 export interface ItemReceta {
-  productId: string; 
-  cantidadMl: number; 
+  productId: string         // ID de la BOTELLA base (insumo)
+  cantidad: number          // ML para Tragos, Unidades para Combos
 }
 
+// ✅ Categorías permitidas
+export type CategoriaProducto = 
+  | 'whisky' | 'vodka' | 'ron/licor' | 'tequila' | 'gin' 
+  | 'cerveza' | 'vino' | 'champagne' | 'Gaseosa' 
+  | 'Trago' | 'Combo' | 'otros'
+
+// ✅ Botellas y Productos (El modelo principal)
 export interface Botella {
   id: string
   nombre: string
-  
-  categoria: 'whisky' | 'vodka' | 'ron' | 'tequila' | 'gin' | 'cerveza' | 'vino' | 'champagne' | 'Gaseosa' | 'Trago' | 'Combo' | 'otros'
   marca: string
+  categoria: CategoriaProducto
+  tipo: 'botella' | 'trago' | 'combo'
   
-  // 2. NUEVOS CAMPOS PARA VOLUMEN REAL
-  tipo: 'botella' | 'receta' | 'combo' 
-  mlPorUnidad: number    // Capacidad: 750, 1000, 1500, etc.
-  stockMl: number        // El stock real en mililitros (ej: 7500 para 10 botellas)
-  stockMinMl: number     // Alerta de stock bajo en mililitros
+  precio: number
+  precioCosto: number
   
-  // Mantenemos estos por compatibilidad visual (opcional)
-  stock: number          // Calculado: stockMl / mlPorUnidad
-  stockMin: number
-  
-  precio: number       
-  precioCosto: number    
-  
-  isCombo?: boolean;     
-  receta?: ItemReceta[];
-  
+  // 🥃 Propiedades para BOTELLAS (Insumos Físicos)
+  mlPorUnidad: number       // Capacidad de la botella (750, 1000, 1500)
+  stockMl: number           // Stock real en mililitros acumulados
+  stockMinMl: number        // Alerta mínima en mililitros
+  graduacion?: number       // % Alcohol (opcional para botellas)
+
+  // 🍹 Propiedades para TRAGOS / COMBOS
+  receta?: ItemReceta[]     // Array de insumos vinculados
+  isCombo?: boolean         // Flag visual
+  capacidadVaso?: number    // ML del vaso para cálculos de dilución (solo tragos)
+
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
+// ✅ Movimientos de Stock
 export interface MovimientoStock {
   id: string
-  botellaId: string
+  botellaId: string         // ID del producto vendido o ingresado
   nombreBotella: string
-  tipo: 'entrada' | 'venta' | 'ajuste' 
-  cantidad: number       
-  stockAnterior: number
-  stockNuevo: number
+  tipo: 'entrada' | 'venta' | 'ajuste'
+  
+  cantidad: number          // Cantidad de unidades (Botellas cerradas, Vasos o Combos)
+  
+  monto: number             // Precio total de la transacción
+  costo: number             // Costo total para calcular ROI
+  
   usuarioId: string
   nombreUsuario: string
   notas?: string
   createdAt: string
 }
 
+// ✅ Alertas inteligentes
 export interface Alerta {
   id: string
   botellaId: string
   nombreBotella: string
-  stockActual: number
-  stockMinimo: number
   tipo: 'low_stock' | 'out_of_stock'
   leida: boolean
   createdAt: string
 }
 
+// ✅ Estadísticas de Dashboard
 export interface EstadisticasDashboard {
-  totalBotellas: number
-  valorTotal: number
+  totalBotellas: number     // Calculado como stockMl / mlPorUnidad
+  valorTotal: number        // Inversión total en bodega (stock * costo)
   conteoStockBajo: number
   conteoSinStock: number
-  ventasHoy: number
-  entradasHoy: number
-  ventasSemana: number
-  ventasMes: number
+  revenueToday: number      // Ventas totales del día
 }

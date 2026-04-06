@@ -142,7 +142,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           { label: 'Stock en Barra', val: `${stats.totalBotellas || 0} bot.`, icon: Droplets, color: 'text-indigo-400' },
           { label: 'Valor en Bodega', val: `$${(stats.valorTotal || 0).toLocaleString()}`, icon: DollarSign, color: 'text-emerald-400' },
           { label: 'Stock Crítico', val: stats.conteoStockBajo || 0, icon: AlertTriangle, color: 'text-orange-400' },
-          { label: 'Agotados', val: stats.conteoSinStock || 0, icon: XCircle, color: 'text-rose-400' },
+          
         ].map((s, i) => (
           <div key={i} className="bg-[#0f172a]/40 border-2 border-slate-800 p-6 rounded-[2.2rem] hover:border-indigo-500/30 transition-all group relative overflow-hidden">
             <s.icon className={`absolute -right-3 -bottom-3 w-20 h-20 opacity-5 ${s.color}`} />
