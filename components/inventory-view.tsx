@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getBottles, addBottle, updateBottle, deleteBottle } from '@/lib/store'
+import { addBottle, updateBottle } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
+import { useInventory } from '@/lib/inventory-context' // Importamos el nuevo contexto
 import { Botella, CategoriaProducto } from '@/lib/types'
 import { 
-  Plus, Search, Edit2, Trash2, X, Wine, 
+  Plus, Search, Edit2, X, Wine, 
   Layers, Loader2, Beaker, FileSpreadsheet, 
-  LayoutGrid, List, Save, Droplets, Percent, CheckCircle2, AlertCircle
+  LayoutGrid, List, Save, CheckCircle2, AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
@@ -30,8 +31,10 @@ const CATEGORIES: { value: CategoriaProducto, label: string, icon: string }[] = 
 export function InventoryView() {
   const { user } = useAuth()
   const isOwner = user?.role === 'owner'
-  const [bottles, setBottles] = useState<Botella[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // 🔥 USO DEL CONTEXTO GLOBAL (Tiempo real)
+  const { bottles, loading } = useInventory()
+
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -42,6 +45,9 @@ export function InventoryView() {
   const [searchInsumo, setSearchInsumo] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
+  const [unitsText, setUnitsText] = useState('')
+  const [minUnitsText, setMinUnitsText] = useState('')
+
   const initialForm = {
     nombre: '', categoria: 'whisky', marca: '', tipo: 'botella',
     mlPorUnidad: 750, stockMl: 0, stockMinMl: 750, precio: 0, precioCosto: 0, 
@@ -49,19 +55,18 @@ export function InventoryView() {
   }
   const [formData, setFormData] = useState<any>(initialForm)
 
-  const loadData = async () => {
-    setLoading(true)
-    const data = await getBottles()
-    setBottles(data)
-    setLoading(false)
-  }
-
-  useEffect(() => { loadData() }, [])
-
+  // Sincronizar los textos de los inputs cuando se abre el modal o cambia la botella
   useEffect(() => {
-    if (showModal) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = 'unset'
-  }, [showModal])
+    if (showModal) {
+      document.body.style.overflow = 'hidden'
+      const u = formData.mlPorUnidad > 0 ? (Number(formData.stockMl || 0) / Number(formData.mlPorUnidad)).toFixed(1) : '0'
+      const m = formData.mlPorUnidad > 0 ? (Number(formData.stockMinMl || 0) / Number(formData.mlPorUnidad)).toFixed(1) : '0'
+      setUnitsText(u)
+      setMinUnitsText(m)
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showModal, formData.mlPorUnidad, editingBottle])
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -110,7 +115,6 @@ export function InventoryView() {
         }
         
         toast.success(`${count} productos importados correctamente`, { id: toastId })
-        loadData()
       } catch (err) { 
         toast.error("Error al procesar el archivo Excel", { id: toastId }) 
       } finally { 
@@ -159,7 +163,6 @@ export function InventoryView() {
             toast.success("Producto creado", { id: loadingToast })
         }
         
-        loadData()
         setShowModal(false)
     } catch (error) {
         toast.error("Error al guardar", { id: loadingToast })
@@ -202,6 +205,12 @@ export function InventoryView() {
     ...cat,
     items: filtered.filter(b => b.categoria?.toLowerCase() === cat.value.toLowerCase())
   })).filter(g => g.items.length > 0)
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-[#0f172a]">
+       <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+    </div>
+  )
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4 font-rounded text-white overflow-hidden px-2 md:px-4">
@@ -325,6 +334,7 @@ export function InventoryView() {
             
             <div className="p-6 border-b-2 border-slate-800 flex justify-between items-center bg-indigo-600/5">
               <h2 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tighter">Ficha de Producto</h2>
+              <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white transition-all"><X size={24} /></button>
             </div>
             
             <form onSubmit={handleSave} className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -333,7 +343,7 @@ export function InventoryView() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-indigo-400 uppercase ml-2">Tipo</label>
-                    <select value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black text-sm">
+                    <select value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black text-sm outline-none focus:border-indigo-500">
                       <option value="botella">📦 BOTELLA (Insumo)</option>
                       <option value="trago">🍹 TRAGO (Mezcla/ML)</option>
                       <option value="combo">🎁 COMBO (Unidades)</option>
@@ -346,7 +356,7 @@ export function InventoryView() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Categoría</label>
-                        <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value as any})} className="w-full px-2 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-slate-300 font-bold text-xs">{CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
+                        <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value as any})} className="w-full px-2 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-slate-300 font-bold text-xs outline-none focus:border-indigo-500">{CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Marca</label>
@@ -367,26 +377,44 @@ export function InventoryView() {
                         <div className="text-center">
                           <p className="text-[9px] font-black text-slate-500 uppercase mb-2">Unidades Actuales</p>
                           <input 
-                            type="number" step="0.1"
-                            value={formData.mlPorUnidad > 0 ? (Number(formData.stockMl || 0) / Number(formData.mlPorUnidad)).toFixed(1) : ''}
-                            className="w-full bg-slate-900 border border-slate-800 p-2 rounded-xl text-xl font-black text-white text-center"
+                            type="text"
+                            inputMode="decimal"
+                            value={unitsText}
+                            className="w-full bg-slate-900 border border-slate-800 p-2 rounded-xl text-xl font-black text-white text-center outline-none focus:border-indigo-500"
                             onChange={(e) => {
-                              const cant = Number(e.target.value);
-                              const ml = Number(formData.mlPorUnidad || 750);
-                              setFormData({ ...formData, stockMl: cant * ml });
+                              const val = e.target.value.replace(',', '.');
+                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                setUnitsText(val);
+                                const num = parseFloat(val) || 0;
+                                const ml = Number(formData.mlPorUnidad || 750);
+                                setFormData({ ...formData, stockMl: num * ml });
+                              }
+                            }}
+                            onBlur={() => {
+                              const final = parseFloat(unitsText) || 0;
+                              setUnitsText(final.toFixed(1));
                             }}
                           />
                         </div>
                         <div className="text-center">
                           <p className="text-[9px] font-black text-amber-500 uppercase mb-2">Aviso Mínimo</p>
                           <input 
-                            type="number" step="0.1"
-                            value={formData.mlPorUnidad > 0 ? (Number(formData.stockMinMl || 0) / Number(formData.mlPorUnidad)).toFixed(1) : ''}
-                            className="w-full bg-amber-600/10 border border-amber-500/30 p-2 rounded-xl text-xl font-black text-amber-400 text-center"
+                            type="text"
+                            inputMode="decimal"
+                            value={minUnitsText}
+                            className="w-full bg-amber-600/10 border border-amber-500/30 p-2 rounded-xl text-xl font-black text-amber-400 text-center outline-none focus:border-amber-500"
                             onChange={(e) => {
-                              const cantMin = Number(e.target.value);
-                              const ml = Number(formData.mlPorUnidad || 750);
-                              setFormData({ ...formData, stockMinMl: cantMin * ml });
+                              const val = e.target.value.replace(',', '.');
+                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                setMinUnitsText(val);
+                                const num = parseFloat(val) || 0;
+                                const ml = Number(formData.mlPorUnidad || 750);
+                                setFormData({ ...formData, stockMinMl: num * ml });
+                              }
+                            }}
+                            onBlur={() => {
+                              const final = parseFloat(minUnitsText) || 0;
+                              setMinUnitsText(final.toFixed(1));
                             }}
                           />
                         </div>
@@ -410,7 +438,7 @@ export function InventoryView() {
                         {(formData.receta || []).map((r:any, idx:number) => (
                           <div key={idx} className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl">
                              <p className="flex-1 text-[10px] font-black text-white uppercase truncate">{bottles.find(b => b.id === r.productId)?.nombre}</p>
-                             <input type="number" value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className="w-12 bg-slate-950 rounded p-1 text-xs font-black text-indigo-400 text-center" />
+                             <input type="number" value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className="w-12 bg-slate-950 rounded p-1 text-xs font-black text-indigo-400 text-center outline-none" />
                              <button type="button" onClick={() => setFormData({...formData, receta: formData.receta.filter((_:any, i:number)=>i!==idx)})} className="text-rose-500 p-1"><X size={16}/></button>
                           </div>
                         ))}

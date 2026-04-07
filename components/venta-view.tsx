@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getBottles, addMovement, savePendingMovement } from '@/lib/store'
+import { addMovement, savePendingMovement } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
+import { useInventory } from '@/lib/inventory-context' // Importamos el contexto global
 import { Botella } from '@/lib/types'
 import { 
   Wine, Zap, History, Search, ShoppingCart, 
@@ -14,9 +15,11 @@ import { toast } from 'sonner'
 export function VentaView() {
   const { user } = useAuth()
   const isPrivileged = user?.role === 'owner' 
-  const [bottles, setBottles] = useState<Botella[]>([])
+  
+  // 🔥 USO DEL CONTEXTO GLOBAL (Sincronización instantánea entre cajas)
+  const { bottles, loading } = useInventory()
+
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [isFinishing, setIsFinishing] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showFullCartMobile, setShowFullCartMobile] = useState(false)
@@ -35,15 +38,7 @@ export function VentaView() {
     return []
   })
 
-  const loadData = async () => {
-    const data = await getBottles()
-    setBottles(data)
-  }
-  
-  useEffect(() => {
-    loadData().then(() => setLoading(false))
-  }, [])
-
+  // Guardar carrito local para persistencia ante cierres accidentales
   useEffect(() => {
     localStorage.setItem('bar_session_sales', JSON.stringify(sessionSales))
   }, [sessionSales])
@@ -77,16 +72,8 @@ export function VentaView() {
       return
     }
 
-    setBottles(prev => prev.map(b => {
-      if ((item.tipo === 'trago' || item.tipo === 'combo') && item.receta) {
-        const ing = item.receta.find(r => r.productId === b.id)
-        if (ing) return { ...b, stockMl: (b.stockMl || 0) - Number(ing.cantidad) }
-      }
-      if (b.id === item.id && item.tipo === 'botella') {
-        return { ...b, stockMl: (b.stockMl || 0) - (b.mlPorUnidad || 0) }
-      }
-      return b
-    }))
+    // Ya no editamos el estado local "bottles" porque el stock se refresca 
+    // automáticamente desde Firebase via onSnapshot en el Contexto.
 
     setSessionSales(prev => {
       const exists = prev.find(s => s.id === item.id)
@@ -94,7 +81,6 @@ export function VentaView() {
       return [...prev, { id: item.id, name: item.nombre, qty: 1, tipo: item.tipo, precio: item.precio }]
     })
 
-    // ✅ ALERTA DE AÑADIDO PERSONALIZADA
     toast.success(`AÑADIDO: ${item.nombre}`, {
       icon: <CheckCircle2 className="text-emerald-500" size={18} />,
       duration: 800,
@@ -103,21 +89,6 @@ export function VentaView() {
   }
 
   const handleUndoLocal = (productId: string) => {
-    const saleItem = sessionSales.find(s => s.id === productId)
-    if (!saleItem) return
-    const original = bottles.find(b => b.id === productId)
-
-    setBottles(prev => prev.map(b => {
-      if (original?.receta) {
-        const ing = original.receta.find(r => r.productId === b.id)
-        if (ing) return { ...b, stockMl: (b.stockMl || 0) + Number(ing.cantidad) }
-      }
-      if (b.id === productId && saleItem.tipo === 'botella') {
-        return { ...b, stockMl: (b.stockMl || 0) + (original?.mlPorUnidad || 0) }
-      }
-      return b
-    }))
-
     setSessionSales(prev => prev.map(s => s.id === productId ? { ...s, qty: s.qty - 1 } : s).filter(s => s.qty > 0))
   }
 
@@ -214,7 +185,7 @@ export function VentaView() {
       setShowFullCartMobile(false);
       setTransactionRef('');
       setClientName('');
-      loadData(); 
+      // No hace falta llamar a loadData(), el onSnapshot se encarga.
     }
   };
 
@@ -224,11 +195,16 @@ export function VentaView() {
   )
 
   const totalAmount = isCourtesy ? 0 : sessionSales.reduce((acc, curr) => acc + (curr.qty * curr.precio), 0)
-  
-  // ✅ Label de cantidad para mobile
   const totalItemsInComanda = sessionSales.reduce((acc, curr) => acc + curr.qty, 0)
 
-  if (loading) return <div className="h-screen flex items-center justify-center text-indigo-500 font-black italic animate-pulse">CARGANDO...</div>
+  // Alerta de stock crítico para los cajeros
+  const lowStockCount = bottles.filter(b => b.tipo === 'botella' && (b.stockMl || 0) <= (b.stockMinMl || 0)).length;
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-[#0f172a]">
+       <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+    </div>
+  )
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-8 font-rounded animate-in fade-in duration-500 overflow-hidden relative">
@@ -238,7 +214,12 @@ export function VentaView() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 px-2">
           <div className="flex items-center gap-4">
             <div className="p-4 bg-indigo-500/20 rounded-[1.5rem] text-indigo-400"><Zap className="w-8 h-8 fill-current" /></div>
-            <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">VENTA</h1>
+            <div>
+              <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">VENTA</h1>
+              {lowStockCount > 0 && (
+                <p className="text-[10px] text-amber-500 font-bold uppercase mt-1 animate-pulse">Hay {lowStockCount} productos con stock bajo</p>
+              )}
+            </div>
           </div>
           <input type="text" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full md:w-72 pl-6 pr-6 py-4 bg-slate-900/50 border-2 border-slate-800 rounded-[1.8rem] text-white outline-none focus:border-indigo-500 font-bold" />
         </div>
@@ -290,7 +271,6 @@ export function VentaView() {
           <div className="flex items-center gap-3">
             <History className="w-5 h-5 text-indigo-400" />
             <h2 className="font-bold text-white uppercase tracking-widest text-xs italic">Comanda</h2>
-            {/* ✅ LABEL DE CANTIDAD DE ITEMS */}
             <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg">
               {totalItemsInComanda} ITEMS
             </span>

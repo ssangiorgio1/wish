@@ -1,12 +1,14 @@
 'use client'
 
 import { useAuth, AuthProvider } from '@/lib/auth-context'
+import { InventoryProvider } from '@/lib/inventory-context' 
 import { LoginForm } from './login-form'
 import { MainDashboard } from './main-dashboard'
 
 function AppContent() {
   const { user, isLoading } = useAuth()
 
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -18,11 +20,16 @@ function AppContent() {
     )
   }
 
+ 
   if (!user) {
     return <LoginForm />
   }
 
-  return <MainDashboard />
+  return (
+    <InventoryProvider>
+      <MainDashboard />
+    </InventoryProvider>
+  )
 }
 
 export function DiscoApp() {

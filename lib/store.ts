@@ -241,21 +241,21 @@ export async function getDashboardStats() {
 
 // --- 7. ARQUEO Y CIERRE DE JORNADA ---
 
-// ✅ Función para cerrar movimientos pendientes
+// ✅ Función para cerrar movimientos corregida
 export async function closeCurrentMovements(userName?: string) {
   try {
     const movementsRef = collection(db, COL_MOVIMIENTOS);
-
     let q;
 
+    // Si el userName es 'todos', cerramos TODO (Cierre Global)
     if (!userName || userName === 'todos') {
-      // 🔥 CIERRE GLOBAL (admin)
       q = query(
         movementsRef,
         where("isClosed", "==", false)
       );
     } else {
-      // 🔒 CIERRE INDIVIDUAL
+      // 🔒 Si se pasa un nombre, SOLO cerramos lo de ese usuario
+      // Esto evita que el Cajero A cierre lo del Cajero B
       q = query(
         movementsRef,
         where("isClosed", "==", false),
@@ -272,7 +272,8 @@ export async function closeCurrentMovements(userName?: string) {
       batch.update(d.ref, {
         isClosed: true,
         closedAt: new Date().toISOString(),
-        closedBy: userName || 'GLOBAL'
+       
+        closedBy: userName || 'GLOBAL' 
       });
     });
 
