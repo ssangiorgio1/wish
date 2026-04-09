@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   Search, Gift, PackagePlus, PackageMinus, Wine, 
-  ChevronUp, ChevronDown, Printer, Filter, ShoppingBag
+  ChevronUp, ChevronDown, Printer, Filter, ShoppingBag, User
 } from 'lucide-react'
 
 interface AuditTabProps {
@@ -25,6 +25,9 @@ export function Auditoria({ movements }: AuditTabProps) {
     const paymentMethod = group.paymentMethod || 'Efectivo';
     const total = group.montoTotal;
     const ticketId = group.id;
+    
+    // Extraer beneficiario de la nota
+    const paraQuien = group.details[0]?.notas?.match(/Para:\s*([^|]+)/i)?.[1]?.trim();
 
     ticketWindow.document.write(`
       <html>
@@ -54,6 +57,7 @@ export function Auditoria({ movements }: AuditTabProps) {
             <span>MEDIO DE PAGO:</span>
             <span>${isCourtesy ? 'INVITACIÓN/REGALO' : paymentMethod.toUpperCase()}</span>
           </div>
+          ${paraQuien ? `<div class="item"><span>PARA:</span><span>${paraQuien.toUpperCase()}</span></div>` : ''}
           <div class="total">
             <span>TOTAL:</span>
             <span>$${total.toLocaleString()}</span>
@@ -91,16 +95,12 @@ export function Auditoria({ movements }: AuditTabProps) {
               m.createdAt)
           : m.createdAt;
 
-        // Cambiamos montoTotal para que sume el valor aunque sea regalo (monto 0 en la DB pero usando el precio de referencia si existiera)
-        // Pero como el sistema guarda el monto final, si es regalo el monto es 0. 
-        // Para que muestre "lo que se va", deberíamos sumar el valor del producto.
         res.push({
           id: gId,
           isGroup: true,
           tipo: m.tipo,
           createdAt: latestDate,
           nombreUsuario: m.nombreUsuario,
-          // Si el monto es 0, usamos 'valorCortesia' si está disponible, o simplemente el monto sumado
           montoTotal: items.reduce((acc: number, curr: any) => acc + Number(isEntry ? (curr.costo || 0) : (curr.monto || curr.valorCortesia || 0)), 0),
           isGift: !isEntry && (m.notas?.toLowerCase().includes('regalo') || m.notas?.toLowerCase().includes('cortesía')),
           paymentMethod: isEntry ? (m.notas?.split('|')[0] || 'STOCK') : (m.notas?.match(/Pago:\s*([^|]+)/i)?.[1]?.trim() || 'Efectivo'),
@@ -126,7 +126,7 @@ export function Auditoria({ movements }: AuditTabProps) {
       const s = search.toLowerCase();
       const matchSearch = (g.id || "").toLowerCase().includes(s) || 
                           (g.nombreUsuario || "").toLowerCase().includes(s) ||
-                          (g.details.some((d: any) => (d.nombreBotella || "").toLowerCase().includes(s)));
+                          (g.details.some((d: any) => (d.nombreBotella || "").toLowerCase().includes(s) || (d.notas || "").toLowerCase().includes(s)));
       if (!matchSearch) return false;
       if (filterType === 'ventas') return g.tipo === 'venta' && !g.isGift;
       if (filterType === 'regalos') return g.isGift;
@@ -143,7 +143,7 @@ export function Auditoria({ movements }: AuditTabProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
           <input 
             type="text" 
-            placeholder="Buscar por Ticket o producto..." 
+            placeholder="Buscar por Ticket, producto o beneficiario..." 
             value={search} 
             onChange={(e) => setSearch(e.target.value)} 
             className="w-full bg-slate-950 border border-slate-800 text-white font-bold text-[11px] pl-9 py-3 rounded-xl outline-none focus:border-indigo-500 transition-all"
@@ -219,6 +219,8 @@ function FilterButton({ active, onClick, label, icon: Icon, color }: any) {
 function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
   const isEntry = m.tipo === 'entrada';
   const isGift = m.isGift;
+  // Extraer el beneficiario de las notas del primer item
+  const paraQuien = m.details[0]?.notas?.match(/Para:\s*([^|]+)/i)?.[1]?.trim();
 
   return (
     <div className={`w-full bg-slate-900/40 border border-slate-800 rounded-[1.2rem] overflow-hidden transition-all ${isExpanded ? 'border-indigo-500/40 bg-slate-900' : ''}`}>
@@ -236,6 +238,12 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
             <h3 className="text-white font-black text-[11px] uppercase italic truncate tracking-tight">
               {m.id || "SIN ID"}
             </h3>
+            {isGift && paraQuien && (
+              <div className="flex items-center gap-1 mt-1">
+                <User size={8} className="text-purple-400" />
+                <span className="text-[8px] font-black text-purple-400 uppercase truncate">Para: {paraQuien}</span>
+              </div>
+            )}
           </div>
           <div className="text-right ml-2">
             <p className={`text-base font-black italic leading-none ${isEntry ? 'text-orange-400' : (isGift ? 'text-purple-400' : 'text-emerald-400')}`}>
@@ -291,6 +299,8 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
 function AuditRow({ m, isExpanded, onToggle, onPrint }: any) {
   const isEntry = m.tipo === 'entrada';
   const isGift = m.isGift;
+  // Extraer el beneficiario de las notas del primer item
+  const paraQuien = m.details[0]?.notas?.match(/Para:\s*([^|]+)/i)?.[1]?.trim();
 
   return (
     <>
@@ -301,10 +311,17 @@ function AuditRow({ m, isExpanded, onToggle, onPrint }: any) {
         <td className="p-6">
           <div className="flex flex-col">
             <span className="text-white font-black text-sm uppercase italic tracking-tighter">{m.id || "SIN ID"}</span>
-            <span className={`text-[9px] font-bold uppercase flex items-center gap-1 ${isGift ? 'text-purple-400' : 'text-indigo-400'} truncate w-48`}>
-              {isGift && <Gift size={10} />}
-              {m.paymentMethod}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[9px] font-bold uppercase flex items-center gap-1 ${isGift ? 'text-purple-400' : 'text-indigo-400'} truncate`}>
+                {isGift && <Gift size={10} />}
+                {m.paymentMethod}
+              </span>
+              {isGift && paraQuien && (
+                <span className="text-[9px] font-black text-white bg-purple-600/40 px-2 py-0.5 rounded italic">
+                  PARA: {paraQuien.toUpperCase()}
+                </span>
+              )}
+            </div>
           </div>
         </td>
         <td className="p-6 text-center">

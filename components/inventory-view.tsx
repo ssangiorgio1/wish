@@ -233,11 +233,15 @@ export function InventoryView() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="flex-1 sm:flex-none p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl cursor-pointer shadow-xl transition-all flex items-center justify-center">
-                 {isImporting ? <Loader2 className="animate-spin" size={20} /> : <FileSpreadsheet size={20}/>}
-                 <input type="file" className="hidden" accept=".xlsx,.xls" onChange={handleImportExcel} />
-              </label>
-              <button onClick={() => { setEditingBottle(null); setFormData(initialForm); setShowModal(true) }} className="flex-1 sm:flex-none p-3 bg-white text-slate-950 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center"><Plus size={20} strokeWidth={4}/></button>
+              {isOwner && (
+                <label className="flex-1 sm:flex-none p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl cursor-pointer shadow-xl transition-all flex items-center justify-center">
+                  {isImporting ? <Loader2 className="animate-spin" size={20} /> : <FileSpreadsheet size={20}/>}
+                  <input type="file" className="hidden" accept=".xlsx,.xls" onChange={handleImportExcel} />
+                </label>
+              )}
+              {isOwner && (
+                <button onClick={() => { setEditingBottle(null); setFormData(initialForm); setShowModal(true) }} className="flex-1 sm:flex-none p-3 bg-white text-slate-950 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center"><Plus size={20} strokeWidth={4}/></button>
+              )}
             </div>
           </div>
         </div>
@@ -343,7 +347,12 @@ export function InventoryView() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-indigo-400 uppercase ml-2">Tipo</label>
-                    <select value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black text-sm outline-none focus:border-indigo-500">
+                    <select 
+                      value={formData.tipo} 
+                      onChange={e => setFormData({...formData, tipo: e.target.value})} 
+                      disabled={!isOwner}
+                      className={`w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black text-sm outline-none focus:border-indigo-500 ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
                       <option value="botella">📦 BOTELLA (Insumo)</option>
                       <option value="trago">🍹 TRAGO (Mezcla/ML)</option>
                       <option value="combo">🎁 COMBO (Unidades)</option>
@@ -370,7 +379,14 @@ export function InventoryView() {
                     <div className="bg-slate-950 p-6 rounded-[2rem] border-2 border-slate-800 space-y-4">
                       <div className="text-center">
                         <label className="text-[11px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Capacidad Botella (ML)</label>
-                        <input type="number" placeholder="750" value={formData.mlPorUnidad ?? ''} onChange={e => setFormData({...formData, mlPorUnidad: e.target.value})} className="w-full bg-transparent text-center text-5xl font-black text-white outline-none italic" />
+                        <input 
+                          type="number" 
+                          placeholder="750" 
+                          value={formData.mlPorUnidad ?? ''} 
+                          onChange={e => setFormData({...formData, mlPorUnidad: e.target.value})} 
+                          disabled={!isOwner}
+                          className={`w-full bg-transparent text-center text-5xl font-black text-white outline-none italic ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                        />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
@@ -380,7 +396,8 @@ export function InventoryView() {
                             type="text"
                             inputMode="decimal"
                             value={unitsText}
-                            className="w-full bg-slate-900 border border-slate-800 p-2 rounded-xl text-xl font-black text-white text-center outline-none focus:border-indigo-500"
+                            disabled={!isOwner}
+                            className={`w-full bg-slate-900 border border-slate-800 p-2 rounded-xl text-xl font-black text-white text-center outline-none ${!isOwner ? 'opacity-50 cursor-not-allowed' : 'focus:border-indigo-500'}`}
                             onChange={(e) => {
                               const val = e.target.value.replace(',', '.');
                               if (val === '' || /^\d*\.?\d*$/.test(val)) {
@@ -402,7 +419,8 @@ export function InventoryView() {
                             type="text"
                             inputMode="decimal"
                             value={minUnitsText}
-                            className="w-full bg-amber-600/10 border border-amber-500/30 p-2 rounded-xl text-xl font-black text-amber-400 text-center outline-none focus:border-amber-500"
+                            disabled={!isOwner}
+                            className={`w-full bg-amber-600/10 border border-amber-500/30 p-2 rounded-xl text-xl font-black text-amber-400 text-center outline-none ${!isOwner ? 'opacity-50 cursor-not-allowed' : 'focus:border-amber-500'}`}
                             onChange={(e) => {
                               const val = e.target.value.replace(',', '.');
                               if (val === '' || /^\d*\.?\d*$/.test(val)) {
@@ -423,6 +441,9 @@ export function InventoryView() {
                         <span className="text-[10px] font-black text-slate-500 uppercase">Volumen Real: </span>
                         <span className="text-[10px] font-black text-indigo-400">{formData.stockMl || 0} ML</span>
                       </div>
+                      {!isOwner && (
+                        <p className="text-[8px] text-rose-400 font-black uppercase text-center mt-2 italic">⚠️ Stock bloqueado </p>
+                      )}
                     </div>
                   ) : (
                     <div className="bg-slate-950 p-6 rounded-[2rem] border-2 border-slate-800 space-y-4">
@@ -438,22 +459,24 @@ export function InventoryView() {
                         {(formData.receta || []).map((r:any, idx:number) => (
                           <div key={idx} className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl">
                              <p className="flex-1 text-[10px] font-black text-white uppercase truncate">{bottles.find(b => b.id === r.productId)?.nombre}</p>
-                             <input type="number" value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className="w-12 bg-slate-950 rounded p-1 text-xs font-black text-indigo-400 text-center outline-none" />
-                             <button type="button" onClick={() => setFormData({...formData, receta: formData.receta.filter((_:any, i:number)=>i!==idx)})} className="text-rose-500 p-1"><X size={16}/></button>
+                             <input type="number" disabled={!isOwner} value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className={`w-12 bg-slate-950 rounded p-1 text-xs font-black text-indigo-400 text-center outline-none ${!isOwner ? 'opacity-50' : ''}`} />
+                             {isOwner && <button type="button" onClick={() => setFormData({...formData, receta: formData.receta.filter((_:any, i:number)=>i!==idx)})} className="text-rose-500 p-1"><X size={16}/></button>}
                           </div>
                         ))}
                       </div>
-                      <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
-                        <input type="text" placeholder="AGREGAR..." value={searchInsumo} onChange={(e) => { setSearchInsumo(e.target.value); setShowDropdown(true); }} className="w-full pl-9 pr-4 py-2 bg-indigo-600/5 border-2 border-dashed border-indigo-500/20 rounded-xl text-xs font-black text-indigo-400 outline-none" />
-                        {showDropdown && searchInsumo.length > 0 && (
-                          <div className="absolute z-[100] w-full mt-2 bg-slate-900 border-2 border-slate-800 rounded-xl max-h-40 overflow-y-auto shadow-2xl">
-                            {bottles.filter(b => b.tipo === 'botella' && b.nombre.toLowerCase().includes(searchInsumo.toLowerCase())).map(b => (
-                                <button key={b.id} type="button" onClick={() => { setFormData({...formData, receta: [...(formData.receta || []), { productId: b.id, cantidad: '' }]}); setShowDropdown(false); setSearchInsumo(''); }} className="w-full text-left p-3 hover:bg-indigo-600/10 text-[10px] font-black uppercase text-white border-b border-slate-800 last:border-0">{b.nombre}</button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {isOwner && (
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
+                          <input type="text" placeholder="AGREGAR..." value={searchInsumo} onChange={(e) => { setSearchInsumo(e.target.value); setShowDropdown(true); }} className="w-full pl-9 pr-4 py-2 bg-indigo-600/5 border-2 border-dashed border-indigo-500/20 rounded-xl text-xs font-black text-indigo-400 outline-none" />
+                          {showDropdown && searchInsumo.length > 0 && (
+                            <div className="absolute z-[100] w-full mt-2 bg-slate-900 border-2 border-slate-800 rounded-xl max-h-40 overflow-y-auto shadow-2xl">
+                              {bottles.filter(b => b.tipo === 'botella' && b.nombre.toLowerCase().includes(searchInsumo.toLowerCase())).map(b => (
+                                  <button key={b.id} type="button" onClick={() => { setFormData({...formData, receta: [...(formData.receta || []), { productId: b.id, cantidad: '' }]}); setShowDropdown(false); setSearchInsumo(''); }} className="w-full text-left p-3 hover:bg-indigo-600/10 text-[10px] font-black uppercase text-white border-b border-slate-800 last:border-0">{b.nombre}</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -464,14 +487,14 @@ export function InventoryView() {
                     <label className="text-[9px] font-black text-rose-500 uppercase block mb-1 tracking-tighter">Costo</label>
                     <div className="flex items-center justify-center gap-1">
                         <span className="text-lg font-black text-rose-500/50">$</span>
-                        <input type="number" value={formData.tipo !== 'botella' ? calcularCostoReceta().toFixed(0) : (formData.precioCosto || '')} onChange={e => setFormData({...formData, precioCosto: Number(e.target.value)})} disabled={formData.tipo !== 'botella'} className="bg-transparent text-2xl font-black text-white text-center w-full outline-none italic" />
+                        <input type="number" value={formData.tipo !== 'botella' ? calcularCostoReceta().toFixed(0) : (formData.precioCosto || '')} onChange={e => setFormData({...formData, precioCosto: Number(e.target.value)})} disabled={formData.tipo !== 'botella' || !isOwner} className={`bg-transparent text-2xl font-black text-white text-center w-full outline-none italic ${(!isOwner && formData.tipo === 'botella') ? 'opacity-50' : ''}`} />
                     </div>
                   </div>
                   <div className="text-center">
                     <label className="text-[9px] font-black text-emerald-500 uppercase block mb-1 tracking-tighter">Venta</label>
                     <div className="flex items-center justify-center gap-1">
                         <span className="text-lg font-black text-emerald-500/50">$</span>
-                        <input type="number" value={formData.precio || ''} onChange={e => setFormData({...formData, precio: Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white text-center w-full outline-none italic" />
+                        <input type="number" value={formData.precio || ''} onChange={e => setFormData({...formData, precio: Number(e.target.value)})} disabled={!isOwner} className={`bg-transparent text-2xl font-black text-white text-center w-full outline-none italic ${!isOwner ? 'opacity-50' : ''}`} />
                     </div>
                   </div>
               </div>
@@ -486,7 +509,8 @@ export function InventoryView() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] py-5 bg-indigo-600 text-white font-black text-xl rounded-[2rem] shadow-xl hover:bg-indigo-500 transition-all uppercase italic flex items-center justify-center gap-3 active:scale-95"
+                  disabled={!isOwner}
+                  className={`flex-[2] py-5 font-black text-xl rounded-[2rem] shadow-xl transition-all uppercase italic flex items-center justify-center gap-3 active:scale-95 ${isOwner ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                 >
                   <Save size={24}/> GUARDAR 
                 </button>

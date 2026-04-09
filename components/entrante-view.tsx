@@ -101,6 +101,15 @@ export default function EntranteView() {
 
   const handleFinalize = async () => {
     if (cart.length === 0 || isSaving) return
+
+    // 🔴 VALIDACIÓN DE REMITO / PROVEEDOR
+    if (!nota.trim()) {
+        toast.error("Falta especificar el Número de Remito o Proveedor", {
+            description: "Es obligatorio para poder trackear el ingreso."
+        });
+        return;
+    }
+
     const toastId = toast.loading("Generando lote de ingreso...")
     setIsSaving(true)
     
@@ -263,9 +272,6 @@ export default function EntranteView() {
           : 'bottom-4 left-4 right-4 h-16 z-[100] rounded-2xl lg:rounded-[3rem]'}
       `}>
         
-        {/* BOTÓN CERRAR FLOTANTE */}
-        
-
         {/* MANIJA TÁCTIL */}
         <div 
           className="lg:hidden w-full flex justify-center py-5 cursor-pointer shrink-0" 
@@ -337,11 +343,13 @@ export default function EntranteView() {
         {/* FOOTER ACCIONES */}
         <div className={`p-5 lg:p-8 bg-slate-900/80 backdrop-blur-md border-t-2 border-slate-800 space-y-4 shrink-0 ${!showFullCartMobile && 'hidden lg:block'}`}>
           <div className="relative group">
-            <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400" />
+            <FileText className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${!nota.trim() ? 'text-rose-500' : 'text-slate-600 group-focus-within:text-indigo-400'}`} />
             <input 
-              type="text" placeholder="Factura / Proveedor..." value={nota}
+              type="text" 
+              placeholder="Número de Remito / Proveedor (OBLIGATORIO)" 
+              value={nota}
               onChange={(e) => setNota(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-white font-bold outline-none focus:border-indigo-500/50 uppercase transition-all"
+              className={`w-full pl-11 pr-4 py-3 bg-slate-950 border rounded-xl text-[10px] text-white font-bold outline-none uppercase transition-all ${!nota.trim() ? 'border-rose-500/50 focus:border-rose-500' : 'border-slate-800 focus:border-indigo-500/50'}`}
             />
           </div>
 

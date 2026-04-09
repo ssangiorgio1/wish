@@ -27,7 +27,7 @@ interface SidebarProps {
 const ownerMenuItems = [
   { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
   { id: 'inventory', label: 'Inventario', icon: Package },
-  { id: 'entrada', label: 'Entradas', icon: Truck }, 
+  { id: 'entrada', label: 'Recepción', icon: Truck }, 
   { id: 'venta', label: 'Ventas', icon: Zap },       
   { id: 'alerts', label: 'Alertas', icon: Bell },
   { id: 'reports', label: 'Reportes', icon: FileText },
@@ -36,7 +36,7 @@ const ownerMenuItems = [
 // Menú para Staff: Enfocado en la operación
 const employeeMenuItems = [
   { id: 'inventory', label: 'Inventario', icon: Package },
-  { id: 'entrada', label: 'Entradas', icon: Truck },
+  { id: 'entrada', label: 'Recepción', icon: Truck },
   { id: 'venta', label: 'Ventas', icon: Zap },
   { id: 'alerts', label: 'Alertas', icon: Bell },
   { id: 'reports', label: 'Reportes', icon: FileText },

@@ -25,9 +25,16 @@ export function Precios({ bottles }: { bottles: Botella[] }) {
       const costoFinal = isTrago ? (item.receta?.reduce((acc, ing) => {
         const insumo = bottles.find(b => b.id === (ing.productId || (ing as any).productID));
         if (!insumo) return acc;
-        // Cálculo preciso: (Costo botella / ML totales) * ML de la receta
-        const costoPorMl = (insumo.precioCosto || 0) / (insumo.mlPorUnidad || 750);
-        return acc + (costoPorMl * Number(ing.cantidad));
+
+        // 🔥 MEJORA DE LÓGICA: Diferenciar Trago de Combo
+        if (item.tipo === 'combo') {
+          // Para COMBOS: Multiplicamos el costo unitario por la cantidad de botellas
+          return acc + (Number(insumo.precioCosto || 0) * Number(ing.cantidad));
+        } else {
+          // Para TRAGOS: Cálculo preciso por mililitro
+          const costoPorMl = (insumo.precioCosto || 0) / (insumo.mlPorUnidad || 750);
+          return acc + (costoPorMl * Number(ing.cantidad));
+        }
       }, 0) || 0) : (item.precioCosto || 0);
 
       const margen = precioVenta - costoFinal;
@@ -54,7 +61,7 @@ export function Precios({ bottles }: { bottles: Botella[] }) {
     return filteredData
       .filter(d => !d.isOnlyInsumo)
       .slice(0, 10) // Mostramos el top 10
-      .map(d => ({ name: d.nombre.substring(0, 12), rent: Math.round(d.rentabilidad) }));
+      .map(d => ({ name: d.nombre.substring(0, 20), rent: Math.round(d.rentabilidad) }));
   }, [filteredData]);
 
   return (
@@ -125,19 +132,19 @@ export function Precios({ bottles }: { bottles: Botella[] }) {
               <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 italic">Rentabilidad neta por unidad de salida</p>
             </div>
           </div>
-          <div className="h-[250px] w-full">
+          <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.3} />
-                <XAxis dataKey="name" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={0} tick={{fontWeight: 'bold', fill: '#64748b'}} />
-                <YAxis stroke="#475569" fontSize={9} tickLine={false} axisLine={false} unit="%" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#b4b4b4" vertical={false} opacity={0.3} />
+                <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} interval={0} tick={{fontWeight: 'bold', fill: '#64748b'}} />
+                <YAxis stroke="#acacac" fontSize={12} tickLine={false} axisLine={false} unit="%" />
                 <Tooltip 
                   cursor={{fill: 'rgba(99,102,241,0.05)'}}
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', fontSize: '11px', fontWeight: 'bold' }} 
+                  contentStyle={{ backgroundColor: '#6b758d', border: '1px solid #1e293b', borderRadius: '16px', fontSize: '11px', fontWeight: 'bold' }} 
                 />
                 <Bar dataKey="rent" radius={[6, 6, 0, 0]} barSize={32}>
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.rent > 75 ? '#10b981' : entry.rent < 45 ? '#f43f5e' : '#6366f1'} fillOpacity={0.8} />
+                    <Cell key={`cell-${index}`} fill={entry.rent > 75 ? '#0cffae' : entry.rent < 45 ? '#f43f5e' : '#6366f1'} fillOpacity={0.8} />
                   ))}
                 </Bar>
               </BarChart>

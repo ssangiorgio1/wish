@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { addMovement, savePendingMovement } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
-import { useInventory } from '@/lib/inventory-context' // Importamos el contexto global
+import { useInventory } from '@/lib/inventory-context' 
 import { Botella } from '@/lib/types'
 import { 
   Wine, Zap, History, Search, ShoppingCart, 
   RotateCcw, Layers, Loader2,
-  GlassWater, Gift, ChevronUp, ChevronDown, X, CheckCircle2
+  GlassWater, Gift, ChevronUp, ChevronDown, X, CheckCircle2, User
 } from 'lucide-react'
 import { toast } from 'sonner' 
 
@@ -16,7 +16,6 @@ export function VentaView() {
   const { user } = useAuth()
   const isPrivileged = user?.role === 'owner' 
   
-  // 🔥 USO DEL CONTEXTO GLOBAL (Sincronización instantánea entre cajas)
   const { bottles, loading } = useInventory()
 
   const [search, setSearch] = useState('')
@@ -38,7 +37,6 @@ export function VentaView() {
     return []
   })
 
-  // Guardar carrito local para persistencia ante cierres accidentales
   useEffect(() => {
     localStorage.setItem('bar_session_sales', JSON.stringify(sessionSales))
   }, [sessionSales])
@@ -71,9 +69,6 @@ export function VentaView() {
       toast.error(`Falta stock de: ${missingNames.join(', ')}`)
       return
     }
-
-    // Ya no editamos el estado local "bottles" porque el stock se refresca 
-    // automáticamente desde Firebase via onSnapshot en el Contexto.
 
     setSessionSales(prev => {
       const exists = prev.find(s => s.id === item.id)
@@ -114,6 +109,8 @@ export function VentaView() {
           <div class="text-center">${isCourtesy ? 'INVITACIÓN / CORTESÍA' : 'Comprobante de Venta'}</div>
           <div class="text-center">${new Date().toLocaleString()}</div>
           <div class="divider"></div>
+          <div class="item"><span>CAJERO:</span><span>${user?.name?.toUpperCase() || 'SISTEMA'}</span></div>
+          <div class="divider"></div>
           ${sessionSales.map(item => `
             <div class="item">
               <span>${item.qty} x ${item.name.substring(0, 20)}</span>
@@ -125,7 +122,7 @@ export function VentaView() {
             <span>MEDIO DE PAGO:</span>
             <span>${isCourtesy ? 'CORTESÍA' : paymentMethod.toUpperCase()}</span>
           </div>
-          ${clientName ? `<div class="item"><span>CLIENTE:</span><span>${clientName.toUpperCase()}</span></div>` : ''}
+          ${clientName ? `<div class="item"><span>${isCourtesy ? 'PARA:' : 'CLIENTE:'}</span><span>${clientName.toUpperCase()}</span></div>` : ''}
           <div class="total">
             <span>TOTAL:</span>
             <span>$${total.toLocaleString()}</span>
@@ -140,8 +137,13 @@ export function VentaView() {
   }
 
   const processFinalSale = async () => {
+    // Validaciones
     if (!isCourtesy && paymentMethod !== 'Efectivo' && !transactionRef) {
-      toast.error("Falta comprobante");
+      toast.error("Falta el número de comprobante");
+      return;
+    }
+    if (isCourtesy && !clientName.trim()) {
+      toast.error("Debes indicar para quién es el regalo");
       return;
     }
     
@@ -152,7 +154,8 @@ export function VentaView() {
     printTicket(ticketId);
 
     const extraInfo = (paymentMethod !== 'Efectivo' && transactionRef) ? ` | Ref: ${transactionRef}` : '';
-    const cliInfo = clientName ? ` | Cli: ${clientName}` : '';
+    const cliLabel = isCourtesy ? 'Para: ' : 'Cli: ';
+    const cliInfo = clientName ? ` | ${cliLabel}${clientName}` : '';
     const paymentLabel = isCourtesy ? 'REGALO' : paymentMethod;
     
     const salesToSync = sessionSales.map(sale => ({
@@ -175,7 +178,7 @@ export function VentaView() {
         addMovement(m.botellaId, 'venta', m.cantidad, m.usuarioId, m.nombreUsuario, m.notas, timestamp)
       );
       await Promise.all(promises);
-      toast.success(isCourtesy ? "Regalo registrado" : "Venta finalizada");
+      toast.success(isCourtesy ? "Regalo registrado correctamente" : "Venta finalizada");
     } catch (e) {
       salesToSync.forEach(m => savePendingMovement(m));
       toast.warning("Guardado offline");
@@ -185,7 +188,6 @@ export function VentaView() {
       setShowFullCartMobile(false);
       setTransactionRef('');
       setClientName('');
-      // No hace falta llamar a loadData(), el onSnapshot se encarga.
     }
   };
 
@@ -197,7 +199,6 @@ export function VentaView() {
   const totalAmount = isCourtesy ? 0 : sessionSales.reduce((acc, curr) => acc + (curr.qty * curr.precio), 0)
   const totalItemsInComanda = sessionSales.reduce((acc, curr) => acc + curr.qty, 0)
 
-  // Alerta de stock crítico para los cajeros
   const lowStockCount = bottles.filter(b => b.tipo === 'botella' && (b.stockMl || 0) <= (b.stockMinMl || 0)).length;
 
   if (loading) return (
@@ -315,7 +316,7 @@ export function VentaView() {
               }`}
             >
               <Gift size={16} />
-              {isCourtesy ? 'REGALO ACTIVADO' : 'MARCAR COMO REGALO'}
+              {isCourtesy ? 'MARCADO COMO REGALO' : 'MARCAR COMO REGALO'}
             </button>
           )}
 
@@ -337,7 +338,7 @@ export function VentaView() {
             className={`w-full py-6 font-black rounded-[1.8rem] flex items-center justify-center gap-3 transition-all text-xl uppercase italic shadow-2xl active:scale-95 disabled:opacity-30 ${isCourtesy ? 'bg-purple-600 text-white' : 'bg-emerald-600 text-white'}`}
           >
             {isFinishing ? <Loader2 size={24} className="animate-spin" /> : isCourtesy ? <Gift /> : <Zap className="fill-current" />} 
-            {isFinishing ? 'Cargando...' : isCourtesy ? 'Confirmar Regalo' : 'Finalizar Venta'}
+            {isFinishing ? 'Procesando...' : isCourtesy ? 'Confirmar Regalo' : 'Finalizar Venta'}
           </button>
         </div>
       </div>
@@ -346,9 +347,16 @@ export function VentaView() {
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[999] flex items-end lg:items-center justify-center p-4">
           <div className="bg-slate-900 border-2 border-slate-800 rounded-t-[3rem] lg:rounded-[3rem] w-full max-w-md p-8 shadow-2xl animate-in slide-in-from-bottom-10">
-            <h2 className="text-2xl font-black text-white uppercase italic text-center mb-8">
-              {isCourtesy ? 'Confirmar Regalo' : 'Confirmar Cobro'}
-            </h2>
+            
+            <div className="flex flex-col items-center mb-6">
+               <div className={`p-4 rounded-2xl mb-4 ${isCourtesy ? 'bg-purple-500/20 text-purple-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                  {isCourtesy ? <Gift size={32}/> : <User size={32}/>}
+               </div>
+               <h2 className="text-2xl font-black text-white uppercase italic text-center">
+                 {isCourtesy ? 'Detalle del Regalo' : 'Confirmar Cobro'}
+               </h2>
+               <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Operador: {user?.name}</p>
+            </div>
             
             {!isCourtesy && (
               <div className="grid grid-cols-3 gap-3 mb-8">
@@ -362,15 +370,29 @@ export function VentaView() {
             
             <div className="space-y-4 mb-6">
                {!isCourtesy && paymentMethod !== 'Efectivo' && (
-                 <input type="text" placeholder="Nº Transacción / Ref" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl text-white font-bold outline-none focus:border-indigo-500" />
+                 <div className="space-y-1">
+                   <label className="text-[9px] font-black text-slate-500 uppercase ml-2">Comprobante</label>
+                   <input type="text" placeholder="Nº Transacción / Ref" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl text-white font-bold outline-none focus:border-indigo-500" />
+                 </div>
                )}
-               <input type="text" placeholder="Nombre del Cliente (Opcional)" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full bg-slate-950 border-2 border-slate-800 p-4 rounded-2xl text-white font-bold outline-none focus:border-indigo-500" />
+               <div className="space-y-1">
+                 <label className="text-[9px] font-black text-slate-500 uppercase ml-2">
+                   {isCourtesy ? '¿Quién recibe el regalo? (Obligatorio)' : 'Nombre del Cliente (Opcional)'}
+                 </label>
+                 <input 
+                   type="text" 
+                   placeholder={isCourtesy ? "EJ: CUMPLEAÑOS JUAN" : "NOMBRE DEL CLIENTE"} 
+                   value={clientName} 
+                   onChange={(e) => setClientName(e.target.value)} 
+                   className={`w-full bg-slate-950 border-2 p-4 rounded-2xl text-white font-bold outline-none transition-all ${isCourtesy && !clientName.trim() ? 'border-rose-500/50 focus:border-rose-500' : 'border-slate-800 focus:border-indigo-500'}`} 
+                 />
+               </div>
             </div>
 
             <div className="flex w-full gap-3">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-4 bg-slate-800 text-slate-400 font-black rounded-2xl uppercase text-[10px]">Cerrar</button>
-              <button onClick={processFinalSale} className={`flex-[2] py-4 font-black rounded-2xl uppercase text-[10px] transition-all ${isCourtesy ? 'bg-purple-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                {isCourtesy ? 'Confirmar Regalo' : 'Confirmar Venta'}
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-4 bg-slate-800 text-slate-400 font-black rounded-2xl uppercase text-[10px] italic">Cancelar</button>
+              <button onClick={processFinalSale} className={`flex-[2] py-4 font-black rounded-2xl uppercase text-[10px] transition-all italic ${isCourtesy ? 'bg-purple-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                {isCourtesy ? 'Confirmar Regalo' : 'Finalizar y Cobrar'}
               </button>
             </div>
           </div>
