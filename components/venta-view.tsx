@@ -105,7 +105,7 @@ export function VentaView() {
     ticketWindow.document.write(`
       <html>
         <head>
-          <title>Ticket ${ticketId} - BUTIC</title>
+          <title>Ticket ${ticketId} - WISH</title>
           <style>
             @page { size: auto; margin: 0mm; }
             body { 
@@ -135,7 +135,7 @@ export function VentaView() {
           </style>
         </head>
         <body>
-          <div class="text-center header">BUTIC</div>
+          <div class="text-center header">WISH</div>
           <div class="text-center" style="font-size: 9px; margin-bottom: 5px;">Mendoza, Argentina</div>
           <div class="text-center" style="font-weight: bold; border: 1px solid #000; padding: 2px;">
             ${isCourtesy ? 'INVITACIÓN / CORTESÍA' : 'TICKET FACTURA'}
@@ -164,7 +164,7 @@ export function VentaView() {
           ` : `
             <div class="text-center" style="font-style: italic; font-size: 9px;">¡Disfrutá tu invitación!</div>
           `}
-          <div class="text-center footer" style="font-size: 7px; margin-top: 15px;">Ticket: ${ticketId}<br>Gracias por elegir Butic</div>
+          <div class="text-center footer" style="font-size: 7px; margin-top: 15px;">Ticket: ${ticketId}<br>Gracias por elegir WISH</div>
           <script>window.onload = function() { window.print(); setTimeout(() => { window.close(); }, 500); }</script>
         </body>
       </html>

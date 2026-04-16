@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'sonner' // 👈 1. Importamos el Toaster
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: 'BUTIC ',
+  title: 'WISH Gestion ',
   description: 'Sistema de gestion de inventario ',
   icons: {
     icon: [
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Analytics />
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   )

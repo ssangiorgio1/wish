@@ -352,16 +352,16 @@ export function InventoryView() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Nombre</label>
-                    <input type="text" placeholder="NOMBRE" required value={formData.nombre || ''} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black uppercase italic text-base outline-none focus:border-indigo-500" />
+                    <input type="text" placeholder="NOMBRE" required value={formData.nombre || ''} onChange={e => setFormData({...formData, nombre: e.target.value})} disabled={!isOwner} className={`w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black uppercase italic text-base outline-none focus:border-indigo-500 ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Categoría</label>
-                        <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value as any})} className="w-full px-2 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-slate-300 font-bold text-xs outline-none focus:border-indigo-500">{CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
+                        <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value as any})} disabled={!isOwner} className={`w-full px-2 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-slate-300 font-bold text-xs outline-none focus:border-indigo-500 ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`}>{CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Marca</label>
-                        <input type="text" placeholder="MARCA" value={formData.marca || ''} onChange={e => setFormData({...formData, marca: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black uppercase italic text-xs outline-none focus:border-indigo-500" />
+                        <input type="text" placeholder="MARCA" value={formData.marca || ''} onChange={e => setFormData({...formData, marca: e.target.value})} disabled={!isOwner} className={`w-full px-4 py-3 bg-slate-950 border-2 border-slate-800 rounded-2xl text-white font-black uppercase italic text-xs outline-none focus:border-indigo-500 ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`} />
                     </div>
                   </div>
                 </div>

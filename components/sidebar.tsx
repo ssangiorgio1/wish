@@ -89,7 +89,7 @@ export function Sidebar({ activeSection, onSectionChange, alertCount }: SidebarP
               <div className="w-11 h-11 bg-indigo-600 rounded-[1.2rem] flex items-center justify-center shadow-lg shadow-indigo-600/30 border border-indigo-400/20">
                 <Wine className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-black text-white tracking-tighter italic">BUTIC</h1>
+              <h1 className="text-2xl font-black text-white tracking-tighter italic">WISH</h1>
             </div>
             
             <button

@@ -25,6 +25,8 @@ export function Auditoria({ movements }: AuditTabProps) {
     const paymentMethod = group.paymentMethod || 'Efectivo';
     const total = group.montoTotal;
     const ticketId = group.id;
+    // Capturamos el nombre de quien hizo la operación
+    const vendedor = group.userName || group.createdBy || 'Sistema';
     
     // Extraer beneficiario de la nota
     const paraQuien = group.details[0]?.notas?.match(/Para:\s*([^|]+)/i)?.[1]?.trim();
@@ -35,16 +37,18 @@ export function Auditoria({ movements }: AuditTabProps) {
           <style>
             body { font-family: 'Courier New', monospace; width: 80mm; padding: 10px; font-size: 12px; color: #000; }
             .text-center { text-align: center; }
-            .header { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+            .header { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
             .divider { border-top: 1px dashed #000; margin: 10px 0; }
             .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
             .total { font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; }
+            .vendedor-info { font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
           </style>
         </head>
         <body>
-          <div class="text-center header">BUTIC</div>
+          <div class="text-center header">WISH</div>
           <div class="text-center">${isCourtesy ? 'INVITACIÓN/REGALO' : 'Comprobante de Venta'}</div>
           <div class="text-center">${new Date(group.createdAt).toLocaleString()}</div>
+          <div class="text-center vendedor-info">CAJA: ${vendedor}</div>
           <div class="divider"></div>
           ${group.details.map((item: any) => `
             <div class="item">

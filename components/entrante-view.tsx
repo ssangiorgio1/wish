@@ -100,12 +100,22 @@ export default function EntranteView() {
   }
 
   const handleFinalize = async () => {
-    if (cart.length === 0 || isSaving) return
+    
+    if (isSaving) return
 
-    // 🔴 VALIDACIÓN DE REMITO / PROVEEDOR
+    if (cart.length === 0) {
+        toast.warning("El carrito está vacío", {
+            description: "Agregá productos antes de confirmar el ingreso."
+        });
+        return;
+    }
+
+    
     if (!nota.trim()) {
-        toast.error("Falta especificar el Número de Remito o Proveedor", {
-            description: "Es obligatorio para poder trackear el ingreso."
+      
+        toast.error("Falta Número de Remito", {
+            description: "Es obligatorio ingresar el remito o proveedor para continuar.",
+            duration: 4000,
         });
         return;
     }
@@ -132,12 +142,15 @@ export default function EntranteView() {
       )
 
       await Promise.all(promises)
+      
       setCart([])
       setNota('')
       localStorage.removeItem('bar_incoming_cart')
       setShowFullCartMobile(false)
       await loadData() 
-      toast.success(`¡Lote ${batchId} ingresado!`, { id: toastId })
+      
+      toast.success("¡Procesado correctamente!", { id: toastId })
+
     } catch (error) {
       console.error(error)
       toast.error("Error al procesar el ingreso", { id: toastId })
@@ -247,10 +260,10 @@ export default function EntranteView() {
                   <div className="text-left">
                     <p className="font-bold text-white text-sm uppercase italic">{bottle.nombre}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <p className="text-[9px] text-slate-500 font-bold uppercase">{bottle.marca}</p>
-                      <div className={`flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md ${isLow ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-800 text-slate-400'}`}>
+                      <p className="text-[12px] text-slate-500 font-bold uppercase">{bottle.marca}</p>
+                      <div className={`flex items-center gap-1 text-[12px] font-black px-2 py-0.5 rounded-md ${isLow ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-800 text-slate-400'}`}>
                         <Droplets className="w-2 h-2" />
-                        {stockVisual} bot.
+                        {stockVisual} botellas
                       </div>
                     </div>
                   </div>
@@ -317,7 +330,7 @@ export default function EntranteView() {
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-center">
-                    <label className="text-[8px] font-black text-slate-600 uppercase mb-1 block">Botellas</label>
+                    <label className="text-[12px] font-black text-slate-600 uppercase mb-1 block">Botellas</label>
                     <input 
                       type="number" step="0.1" value={item.qty === 0 ? '' : item.qty} 
                       onFocus={handleFocus}
@@ -326,7 +339,7 @@ export default function EntranteView() {
                     />
                   </div>
                   <div className="text-center">
-                    <label className="text-[8px] font-black text-slate-600 uppercase mb-1 block">Costo Unit.</label>
+                    <label className="text-[12px] font-black text-slate-600 uppercase mb-1 block">Costo Unit.</label>
                     <input 
                       type="number" value={item.cost === 0 ? '' : item.cost}
                       onFocus={handleFocus}
@@ -359,13 +372,13 @@ export default function EntranteView() {
           </div>
 
           <button 
-            onClick={handleFinalize} 
-            disabled={isSaving || cart.length === 0} 
-            className={`w-full py-4 ${isSaving ? 'bg-slate-800 text-slate-600' : 'bg-emerald-600 text-white shadow-lg active:scale-95'} font-black rounded-2xl flex items-center justify-center gap-3 text-base uppercase italic transition-all`}
-          >
-            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Confirmar Ingreso
-          </button>
+          onClick={handleFinalize} 
+          disabled={isSaving} 
+          className={`w-full py-4 ${isSaving ? 'bg-slate-800 text-slate-600' : 'bg-emerald-600 text-white shadow-lg active:scale-95'} font-black rounded-2xl flex items-center justify-center gap-3 text-base uppercase italic transition-all`}
+        >
+          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          Confirmar Ingreso
+        </button>
         </div>
       </div>
 
