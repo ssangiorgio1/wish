@@ -17,6 +17,8 @@ export function Precios({ bottles }: { bottles: Botella[] }) {
   const [filterTipo, setFilterTipo] = useState<'todos' | 'botella' | 'trago' | 'combo'>('todos')
   const [filterSalud, setFilterSalud] = useState<'todos' | 'alerta' | 'ok'>('todos')
 
+ const [visibleCount, setVisibleCount] = useState(10);
+
   const fullData = useMemo(() => {
     return bottles.map(item => {
       const isTrago = item.tipo === 'trago' || item.tipo === 'combo';
@@ -154,95 +156,113 @@ export function Precios({ bottles }: { bottles: Botella[] }) {
       </div>
 
       {/* 3. LISTADO MAESTRO */}
+     
+
       <div className="bg-[#0f172a]/40 border-2 border-slate-800 rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl mx-2">
-         <div className="p-6 md:p-10 border-b border-slate-800 bg-slate-900/20 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-center md:text-left">
-              <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Explorador de Precios</h2>
-              <div className="flex items-center gap-2 mt-2 justify-center md:justify-start">
+    <div className="p-6 md:p-10 border-b border-slate-800 bg-slate-900/20 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="text-center md:text-left">
+            <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Explorador de Precios</h2>
+            <div className="flex items-center gap-2 mt-2 justify-center md:justify-start">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{filteredData.length} Items analizados</p>
-              </div>
             </div>
-            <div className="relative w-full md:w-96">
-               <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
-               <input 
-                  type="text" 
-                  placeholder="BUSCAR POR NOMBRE O MARCA..." 
-                  value={search} 
-                  onChange={e => setSearch(e.target.value)} 
-                  className="w-full bg-slate-950 border-2 border-slate-800 text-white py-4 pl-14 pr-6 rounded-[1.5rem] text-xs font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" 
-               />
-            </div>
-         </div>
+        </div>
+        <div className="relative w-full md:w-96">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
+            <input 
+                type="text" 
+                placeholder="BUSCAR POR NOMBRE O MARCA..." 
+                value={search} 
+                onChange={e => {
+                    setSearch(e.target.value);
+                    setVisibleCount(10); // Reseteamos al buscar para fluidez
+                }} 
+                className="w-full bg-slate-950 border-2 border-slate-800 text-white py-4 pl-14 pr-6 rounded-[1.5rem] text-xs font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" 
+            />
+        </div>
+    </div>
 
-         {/* VISTA DESKTOP */}
-         <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[950px]">
-              <thead className="bg-slate-950/50">
+    {/* VISTA DESKTOP */}
+    <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[950px]">
+            <thead className="bg-slate-950/50">
                 <tr className="text-slate-500 text-[10px] font-black uppercase border-b border-slate-800">
-                  <th className="p-8 text-center">TIPO</th>
-                  <th className="p-8">DETALLE DEL PRODUCTO</th>
-                  <th className="p-8 text-right">COSTO REAL</th>
-                  <th className="p-8 text-right">PVP VENTA</th>
-                  <th className="p-8 text-center">GANANCIA UNIT.</th>
-                  <th className="p-8 text-center">RENTABILIDAD</th>
+                    <th className="p-8 text-center">TIPO</th>
+                    <th className="p-8">DETALLE DEL PRODUCTO</th>
+                    <th className="p-8 text-right">COSTO REAL</th>
+                    <th className="p-8 text-right">PVP VENTA</th>
+                    <th className="p-8 text-center">GANANCIA UNIT.</th>
+                    <th className="p-8 text-center">RENTABILIDAD</th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/40">
-                {filteredData.map((row) => (
-                  <tr key={row.id} className="hover:bg-white/[0.03] transition-all group">
-                    <td className="p-8 text-center">
-                       <span className={`text-[9px] font-black px-4 py-1.5 rounded-xl uppercase ${row.isTrago ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'} border border-current/10`}>
-                          {row.tipo}
-                       </span>
-                    </td>
-                    <td className="p-8">
-                      <p className="text-white font-black uppercase italic text-base leading-none group-hover:text-indigo-400 transition-colors">{row.nombre}</p>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{row.marca || 'Genérico'}</p>
-                    </td>
-                    <td className="p-8 text-right font-black text-slate-400 text-sm">
-                      <span className="text-slate-600 mr-1">$</span>
-                      {Math.round(row.costoFinal).toLocaleString()}
-                    </td>
-                    <td className="p-8 text-right font-black text-emerald-400 text-base">
-                      {row.precio > 0 ? `$${row.precio.toLocaleString()}` : '--'}
-                    </td>
-                    <td className="p-8 text-center">
-                      {!row.isOnlyInsumo ? (
-                        <div className="inline-flex flex-col items-center">
-                           <span className="text-white font-black text-sm">${Math.round(row.margen).toLocaleString()}</span>
-                           <span className="text-[8px] text-slate-600 font-black uppercase mt-1">Neto</span>
-                        </div>
-                      ) : '--'}
-                    </td>
-                    <td className="p-8">
-                       {!row.isOnlyInsumo ? (
-                         <div className="flex items-center justify-center gap-5">
-                            <div className={`text-sm font-black italic ${row.rentabilidad > 75 ? 'text-emerald-400' : row.rentabilidad < 45 ? 'text-rose-500' : 'text-indigo-400'}`}>
-                               {row.rentabilidad.toFixed(0)}%
-                            </div>
-                            <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                               <div 
-                                  className={`h-full transition-all duration-1000 ${row.rentabilidad > 75 ? 'bg-emerald-500' : row.rentabilidad < 45 ? 'bg-rose-500' : 'bg-indigo-500'}`} 
-                                  style={{ width: `${Math.min(100, row.rentabilidad)}%` }} 
-                                />
-                            </div>
-                         </div>
-                       ) : <span className="text-slate-800 text-center block text-[10px] font-black uppercase tracking-tighter">Uso interno (Insumo)</span>}
-                    </td>
-                  </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/40">
+                {/* ⚡ APLICAMOS SLICE AQUÍ */}
+                {filteredData.slice(0, visibleCount).map((row) => (
+                    <tr key={row.id} className="hover:bg-white/[0.03] transition-all group">
+                        <td className="p-8 text-center">
+                            <span className={`text-[9px] font-black px-4 py-1.5 rounded-xl uppercase ${row.isTrago ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'} border border-current/10`}>
+                                {row.tipo}
+                            </span>
+                        </td>
+                        <td className="p-8">
+                            <p className="text-white font-black uppercase italic text-base leading-none group-hover:text-indigo-400 transition-colors">{row.nombre}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{row.marca || 'Genérico'}</p>
+                        </td>
+                        <td className="p-8 text-right font-black text-slate-400 text-sm">
+                            <span className="text-slate-600 mr-1">$</span>
+                            {Math.round(row.costoFinal).toLocaleString()}
+                        </td>
+                        <td className="p-8 text-right font-black text-emerald-400 text-base">
+                            {row.precio > 0 ? `$${row.precio.toLocaleString()}` : '--'}
+                        </td>
+                        <td className="p-8 text-center">
+                            {!row.isOnlyInsumo ? (
+                                <div className="inline-flex flex-col items-center">
+                                    <span className="text-white font-black text-sm">${Math.round(row.margen).toLocaleString()}</span>
+                                    <span className="text-[8px] text-slate-600 font-black uppercase mt-1">Neto</span>
+                                </div>
+                            ) : '--'}
+                        </td>
+                        <td className="p-8">
+                            {!row.isOnlyInsumo ? (
+                                <div className="flex items-center justify-center gap-5">
+                                    <div className={`text-sm font-black italic ${row.rentabilidad > 75 ? 'text-emerald-400' : row.rentabilidad < 45 ? 'text-rose-500' : 'text-indigo-400'}`}>
+                                        {row.rentabilidad.toFixed(0)}%
+                                    </div>
+                                    <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                                        <div 
+                                            className={`h-full transition-all duration-1000 ${row.rentabilidad > 75 ? 'bg-emerald-500' : row.rentabilidad < 45 ? 'bg-rose-500' : 'bg-indigo-500'}`} 
+                                            style={{ width: `${Math.min(100, row.rentabilidad)}%` }} 
+                                        />
+                                    </div>
+                                </div>
+                            ) : <span className="text-slate-800 text-center block text-[10px] font-black uppercase tracking-tighter">Uso interno (Insumo)</span>}
+                        </td>
+                    </tr>
                 ))}
-              </tbody>
-            </table>
-         </div>
+            </tbody>
+        </table>
+    </div>
 
-         {/* VISTA MOBILE */}
-         <div className="md:hidden divide-y divide-slate-800/40">
-            {filteredData.map((row) => (
-              <PriceMobileCard key={row.id} row={row} />
-            ))}
-         </div>
-      </div>
+    {/* VISTA MOBILE */}
+    <div className="md:hidden divide-y divide-slate-800/40">
+        {filteredData.slice(0, visibleCount).map((row) => (
+            <PriceMobileCard key={row.id} row={row} />
+        ))}
+    </div>
+
+    {/* 🔘 BOTÓN CARGAR MÁS */}
+    {visibleCount < filteredData.length && (
+        <div className="p-8 flex justify-center bg-slate-900/20 border-t border-slate-800">
+            <button 
+                onClick={() => setVisibleCount(prev => prev + 20)}
+                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
+            >
+                Mostrar más productos
+            </button>
+        </div>
+    )}
+</div>
     </div>
   );
 }

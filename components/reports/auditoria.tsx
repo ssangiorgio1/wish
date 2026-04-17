@@ -232,7 +232,7 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
         <div className="flex justify-between items-center">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
-               <span className={`text-[6px] font-black px-1.5 py-0.5 rounded uppercase ${isEntry ? 'bg-orange-500' : isGift ? 'bg-purple-600' : 'bg-indigo-600'} text-white`}>
+               <span className={`text-[12px] font-black px-1.5 py-0.5 rounded uppercase ${isEntry ? 'bg-orange-500' : isGift ? 'bg-purple-600' : 'bg-indigo-600'} text-white`}>
                 {isEntry ? 'STOCK' : isGift ? 'REGALO' : 'VENTA'}
                </span>
                <span className="text-[8px] font-black text-slate-600 uppercase italic">
@@ -245,7 +245,7 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
             {isGift && paraQuien && (
               <div className="flex items-center gap-1 mt-1">
                 <User size={8} className="text-purple-400" />
-                <span className="text-[8px] font-black text-purple-400 uppercase truncate">Para: {paraQuien}</span>
+                <span className="text-[12px] font-black text-purple-400 uppercase truncate">Para: {paraQuien}</span>
               </div>
             )}
           </div>
@@ -258,10 +258,10 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
         </div>
         
         <div className="flex items-center justify-between border-t border-slate-800/50 pt-2">
-          <span className="text-[8px] font-bold text-slate-500 uppercase truncate italic">
+          <span className="text-[10px] font-bold text-slate-500 uppercase truncate italic">
             Por: {m.nombreUsuario?.split(' ')[0]}
           </span>
-          <span className="text-[8px] font-black text-slate-600 uppercase">
+          <span className="text-[10px] font-black text-slate-600 uppercase">
             {m.paymentMethod}
           </span>
         </div>
@@ -286,8 +286,8 @@ function AuditMobileCard({ m, isExpanded, onToggle, onPrint }: any) {
           {m.details.map((item: any, idx: number) => (
             <div key={idx} className="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] font-black text-slate-200 uppercase italic truncate">{item.nombreBotella}</p>
-                  <p className="text-[7px] text-slate-600 font-bold uppercase mt-0.5">Cant: {item.cantidad}</p>
+                  <p className="text-[12px] font-black text-slate-200 uppercase italic truncate">{item.nombreBotella}</p>
+                  <p className="text-[10px] text-slate-600 font-bold uppercase mt-0.5">Cant: {item.cantidad}</p>
                </div>
                <p className={`text-[10px] font-black italic shrink-0 ml-2 ${isEntry ? 'text-orange-400' : isGift ? 'text-purple-400' : 'text-emerald-400'}`}>
                  ${Number(isEntry ? (item.costo || 0) : (item.monto || item.valorCortesia || 0)).toLocaleString()}

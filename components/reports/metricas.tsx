@@ -32,19 +32,19 @@ export function Metricas({ reportData }: { reportData: any }) {
   const processed = useMemo(() => {
     if (!reportData || !reportData.movements) return null;
 
-    // Lógica de filtrado por hora (considerando cruce de medianoche)
+    // 1. Filtrado por hora (Considerando cruce de medianoche)
     const isInTimeRange = (dateString: string) => {
       const hour = new Date(dateString).getHours();
       if (horaInicio < horaFin) {
         return hour >= horaInicio && hour <= horaFin;
       } else {
-        // Rango nocturno (ej: de 21 a 06)
         return hour >= horaInicio || hour <= horaFin;
       }
     };
 
     const sales = reportData.movements.filter((m: any) => m.tipo === 'venta' && isInTimeRange(m.createdAt));
     
+    // 2. Totales Base
     const totalVentas = sales.reduce((a: number, c: any) => a + Number(c.monto || 0), 0);
     const totalCostoVendido = sales.reduce((a: number, c: any) => a + Number(c.costo || 0), 0);
     const gananciaReal = totalVentas - totalCostoVendido;
@@ -54,23 +54,50 @@ export function Metricas({ reportData }: { reportData: any }) {
       .filter((m: any) => (m.notas?.toLowerCase().includes('regalo') || m.notas?.toLowerCase().includes('cortesía')))
       .reduce((a: number, c: any) => a + Number(c.monto || c.valorCortesia || 0), 0);
 
-    // Gráfico de Rendimiento (Fecha + Hora)
-    const hourlyMap: Record<string, { fullLabel: string, venta: number, ganancia: number, timestamp: number }> = {};
+    // 3. Gráfico de Rendimiento y Top Salidas (Cálculo unificado)
+    const hourlyMap: Record<string, any> = {};
+    const productMap: Record<string, { name: string, count: number }> = {};
+    const catMap: Record<string, number> = {};
+
     sales.forEach((m: any) => {
       const d = new Date(m.createdAt);
+      
+      // Lógica de Gráfico Temporal
       const fullLabel = `${d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} ${d.getHours()}:00`;
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`;
-      
       if (!hourlyMap[key]) {
         hourlyMap[key] = { fullLabel, venta: 0, ganancia: 0, timestamp: d.getTime() };
       }
       const monto = Number(m.monto || 0);
       hourlyMap[key].venta += monto;
       hourlyMap[key].ganancia += (monto - Number(m.costo || 0));
+
+      // Lógica de Top Productos (Corregido)
+      const pId = m.botellaId || m.productId;
+      const pName = m.nombreBotella || m.nombre || 'Desconocido';
+      if (pId) {
+        if (!productMap[pId]) productMap[pId] = { name: pName, count: 0 };
+        productMap[pId].count += Number(m.cantidad || 1);
+      }
+
+      // Lógica de Mix Financiero
+      const cat = m.categoria || 'OTROS';
+      catMap[cat] = (catMap[cat] || 0) + monto;
     });
+
+    // Formatear Top Products (Los 5 más vendidos en la franja horaria)
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Formatear Mix Financiero
+    const pieData = Object.entries(catMap)
+      .map(([name, value]) => ({ name: name.toUpperCase(), value }))
+      .sort((a, b) => b.value - a.value);
+
     const performanceData = Object.values(hourlyMap).sort((a, b) => a.timestamp - b.timestamp);
 
-    // Gráfico de Crecimiento Acumulado
+    // 4. Crecimiento Acumulado
     let acc = 0;
     const trend = [...sales]
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -81,18 +108,6 @@ export function Metricas({ reportData }: { reportData: any }) {
           acumulado: acc
         }
       });
-
-    // Mix de Categorías
-    const catMap: Record<string, number> = {};
-    sales.forEach((m: any) => {
-      const cat = m.categoria || 'Otros';
-      catMap[cat] = (catMap[cat] || 0) + Number(m.monto || 0);
-    });
-    const pieData = Object.entries(catMap).map(([name, value]) => ({ name: name.toUpperCase(), value }));
-
-    const topProducts = reportData.salesByBottle
-      ?.filter((p: any) => sales.some((s: any) => s.botellaId === p.id))
-      .slice(0, 5) || [];
 
     return { 
       trend, pieData, performanceData, totalVentas, gananciaReal, 

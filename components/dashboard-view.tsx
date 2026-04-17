@@ -112,14 +112,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           </p>
         </div>
         
-        <div className="flex gap-3">
-          <button onClick={() => onNavigate('venta')} className="flex items-center gap-2 px-6 py-4 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-rose-600/20 active:scale-95 italic uppercase text-xs">
-            <Zap className="w-4 h-4 fill-current" /> Despacho
-          </button>
-          <button onClick={() => onNavigate('entrada')} className="flex items-center gap-2 px-6 py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all active:scale-95 italic uppercase text-xs">
-            <Truck className="w-4 h-4" /> Recepción
-          </button>
-        </div>
+        
       </div>
 
       {/* MÉTRICAS DUEÑO (CAJA Y EFICIENCIA) */}
