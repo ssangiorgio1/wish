@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addBottle, updateBottle } from '@/lib/store'
+import { addBottle, updateBottle, deleteBottle } from '@/lib/store' // 🔥 Agregado deleteBottle
 import { useAuth } from '@/lib/auth-context'
 import { useInventory } from '@/lib/inventory-context'
 import { Botella, CategoriaProducto } from '@/lib/types'
 import { 
   Plus, Search, Edit2, X, Wine, 
   Layers, Loader2, Beaker, FileSpreadsheet, 
-  LayoutGrid, List, Save, CheckCircle2, AlertCircle, XCircle
+  LayoutGrid, List, Save, CheckCircle2, AlertCircle, XCircle, Trash2, Download 
 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
@@ -28,7 +28,6 @@ const CATEGORIES: { value: CategoriaProducto, label: string, icon: string }[] = 
   { value: 'otros', label: 'Otros', icon: '🎁' },
 ]
 
-// 🔥 Definimos el margen de error (Epsilon) para el boliche
 const UMBRAL_AGOTADO = 10; 
 
 export function InventoryView() {
@@ -56,17 +55,34 @@ export function InventoryView() {
   }
   const [formData, setFormData] = useState<any>(initialForm)
 
+  // 🔥 Función de eliminación integrada
+  const handleDelete = async (id: string, nombre: string) => {
+  if (!isOwner) return;
+  
+  if (window.confirm(`¿ELIMINAR "${nombre}"?`)) {
+    // 1. Iniciamos el toast de carga
+    const tid = toast.loading("ELIMINANDO..."); 
+    
+    try {
+      await deleteBottle(id);
+      // 2. Si sale bien, lo transformamos en éxito
+      toast.success(`"${nombre}" ELIMINADO`, { id: tid }); 
+      if (showModal) setShowModal(false);
+    } catch (e) {
+      // 3. Si falla, avisamos el error
+      toast.error("NO SE PUDO ELIMINAR", { id: tid });
+    }
+  }
+  }
+
   useEffect(() => {
     if (showModal) {
       document.body.style.overflow = 'hidden';
       const ml = Number(formData.mlPorUnidad || 1);
       const stock = Number(formData.stockMl || 0);
       const min = Number(formData.stockMinMl || 0);
-      
-      // 🔥 Corrección: Si el stock es menor al umbral, mostramos 0.0 unidades
       const u = stock < UMBRAL_AGOTADO ? '0.0' : (stock / ml).toFixed(1);
       const m = (min / ml).toFixed(1);
-      
       setUnitsText(u);
       setMinUnitsText(m);
     } else {
@@ -191,7 +207,6 @@ export function InventoryView() {
     if (filterStock === 'available') {
       matchesStock = isBottle ? currentStock >= UMBRAL_AGOTADO && currentStock > stockMin : true;
     } else if (filterStock === 'low_stock') {
-      // ✅ Filtro de bajos: Por debajo del mínimo pero todavía usable (>= umbral)
       matchesStock = isBottle && currentStock <= stockMin && currentStock >= UMBRAL_AGOTADO;
     } else if (filterStock === 'out_of_stock') {
       matchesStock = isBottle && currentStock < UMBRAL_AGOTADO;
@@ -209,6 +224,43 @@ export function InventoryView() {
        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
     </div>
   )
+
+  const handleExportExcel = () => {
+  const toastId = toast.loading("Generando planilla de inventario...");
+  
+  try {
+    // 1. Filtramos solo lo que es botella (insumos)
+    const insumos = bottles.filter(b => b.tipo === 'botella');
+
+    // 2. Preparamos los datos para el Excel con tu lógica de unidades
+    const dataToExport = insumos.map(b => {
+      const ml = Number(b.stockMl || 0);
+      const capacidad = Number(b.mlPorUnidad || 1);
+      // Calculamos las unidades (ej: 1.5 botellas)
+      const unidades = ml < UMBRAL_AGOTADO ? 0 : (ml / capacidad);
+
+      return {
+        "Producto": b.nombre.toUpperCase(),
+        "StockInicial": unidades.toFixed(2)
+      };
+    });
+
+    // 3. Creamos el libro de Excel usando la librería XLSX que ya tenés importada
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+    // 4. Descargamos
+    XLSX.writeFile(wb, `Inventario_Butic_${new Date().toLocaleDateString('es-AR').replace(/\//g, '-')}.xlsx`);
+    
+    toast.success("Planilla generada con éxito", { id: toastId });
+  } catch (error) {
+    console.error(error);
+    toast.error("Error al exportar", { id: toastId });
+  }
+};
+
+  
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4 font-rounded text-white overflow-hidden px-2 md:px-4">
@@ -230,16 +282,30 @@ export function InventoryView() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              {isOwner && (
-                <label className="flex-1 sm:flex-none p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl cursor-pointer shadow-xl transition-all flex items-center justify-center">
-                  {isImporting ? <Loader2 className="animate-spin" size={20} /> : <FileSpreadsheet size={20}/>}
-                  <input type="file" className="hidden" accept=".xlsx,.xls" onChange={handleImportExcel} />
-                </label>
-              )}
-              {isOwner && (
-                <button onClick={() => { setEditingBottle(null); setFormData(initialForm); setShowModal(true) }} className="flex-1 sm:flex-none p-3 bg-white text-slate-950 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center"><Plus size={20} strokeWidth={4}/></button>
-              )}
-            </div>
+          {isOwner && (
+            <>
+              {/* 📥 BOTÓN EXPORTAR (AZUL) */}
+              <button 
+                onClick={handleExportExcel}
+                title="Exportar Inventario para Recepción"
+                className="flex-1 sm:flex-none p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl cursor-pointer shadow-xl transition-all flex items-center justify-center group active:scale-95"
+              >
+                <Download size={20} />
+              </button>
+
+              {/* 📤 BOTÓN IMPORTAR (ES EL QUE YA TENÍAS) */}
+              <label className="flex-1 sm:flex-none p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl cursor-pointer shadow-xl transition-all flex items-center justify-center">
+                {isImporting ? <Loader2 className="animate-spin" size={20} /> : <FileSpreadsheet size={20}/>}
+                <input type="file" className="hidden" accept=".xlsx,.xls" onChange={handleImportExcel} />
+              </label>
+            </>
+          )}
+          {isOwner && (
+            <button onClick={() => { setEditingBottle(null); setFormData(initialForm); setShowModal(true) }} className="flex-1 sm:flex-none p-3 bg-white text-slate-950 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center">
+              <Plus size={20} strokeWidth={4}/>
+            </button>
+          )}
+        </div>
           </div>
         </div>
 
@@ -285,7 +351,6 @@ export function InventoryView() {
                 const currentStock = Number(b.stockMl || 0);
                 const capacity = Number(b.mlPorUnidad || 1);
                 
-                // 🔥 Lógica de etiquetas con Umbral
                 const isEmpty = isBottle && currentStock < UMBRAL_AGOTADO;
                 const low = isBottle && !isEmpty && currentStock <= Number(b.stockMinMl);
                 
@@ -305,7 +370,12 @@ export function InventoryView() {
                           <p className="text-xs font-black italic text-emerald-500">${b.precio}</p>
                           <p className="text-[20px] font-black text-slate-300">{isBottle ? `${units} u.` : '—'}</p>
                         </div>
-                        <button onClick={() => { setEditingBottle(b); setFormData(b); setShowModal(true) }} className="p-2 bg-slate-800 rounded-lg text-slate-300"><Edit2 size={14} /></button>
+                        <div className="flex gap-2">
+                          <button onClick={() => { setEditingBottle(b); setFormData(b); setShowModal(true) }} className="p-2 bg-slate-800 rounded-lg text-slate-300"><Edit2 size={14} /></button>
+                          {isOwner && (
+                            <button onClick={() => handleDelete(b.id, b.nombre)} className="p-2 bg-slate-800 hover:bg-rose-600/20 text-slate-500 hover:text-rose-500 transition-colors rounded-lg"><Trash2 size={14} /></button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -317,7 +387,12 @@ export function InventoryView() {
                       <span className={`px-2 py-1 rounded-lg text-[12px] font-black uppercase ${isEmpty ? 'bg-rose-600' : low ? 'bg-amber-600' : !isBottle ? 'bg-purple-600' : 'bg-emerald-600'} text-white shadow-lg`}>
                         {isEmpty ? 'AGOTADO' : low ? 'BAJO' : b.tipo?.toUpperCase()}
                       </span>
-                      <button onClick={() => { setEditingBottle(b); setFormData(b); setShowModal(true) }} className="p-2 bg-slate-800 rounded-xl text-white md:opacity-0 group-hover:opacity-100 transition-all"><Edit2 size={14} /></button>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingBottle(b); setFormData(b); setShowModal(true) }} className="p-2 bg-slate-800 rounded-xl text-white md:opacity-0 group-hover:opacity-100 transition-all"><Edit2 size={14} /></button>
+                        {isOwner && (
+                          <button onClick={() => handleDelete(b.id, b.nombre)} className="p-2 bg-slate-800 rounded-xl text-slate-500 hover:text-rose-500 md:opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
+                        )}
+                      </div>
                     </div>
                     <h3 className={`font-black uppercase italic text-lg leading-tight my-3 truncate ${isEmpty ? 'text-slate-500' : 'text-white'}`}>{b.nombre}</h3>
                     <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50 flex justify-between items-center">
@@ -384,7 +459,6 @@ export function InventoryView() {
                       </div>
                       <div className="text-center pt-2">
                         <span className="text-[12px] font-black text-slate-500 uppercase">Volumen Real: </span>
-                        {/* 🔥 Corrección coherente con el umbral: < 10ml muestra 0 */}
                         <span className="text-[15px] font-black text-indigo-400">{(formData.stockMl < UMBRAL_AGOTADO ? '0' : formData.stockMl)} ML</span>
                       </div>
                     </div>
@@ -397,8 +471,8 @@ export function InventoryView() {
                       <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar space-y-2">
                         {(formData.receta || []).map((r:any, idx:number) => (
                           <div key={idx} className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl">
-                             <p className="flex-1 text-[10px] font-black text-white uppercase truncate">{bottles.find(b => b.id === r.productId)?.nombre}</p>
-                             <input type="number" disabled={!isOwner} value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className={`w-12 bg-slate-950 rounded p-1 text-xs font-black text-indigo-400 text-center outline-none ${!isOwner ? 'opacity-50' : ''}`} />
+                             <p className="flex-1 text-[12px] font-black text-white uppercase truncate">{bottles.find(b => b.id === r.productId)?.nombre}</p>
+                             <input type="number" disabled={!isOwner} value={r.cantidad ?? ''} onChange={e => {const n=[...formData.receta]; n[idx].cantidad=e.target.value; setFormData({...formData, receta:n})}} className={`w-16 bg-slate-950 rounded p-0 text-xl font-black text-indigo-400 text-center outline-none ${!isOwner ? 'opacity-50' : ''}`} />
                              {isOwner && <button type="button" onClick={() => setFormData({...formData, receta: formData.receta.filter((_:any, i:number)=>i!==idx)})} className="text-rose-500 p-1"><X size={16}/></button>}
                           </div>
                         ))}

@@ -1,16 +1,18 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getReportDataCloud, getBottles, getMovements } from '@/lib/store' // ✅ Importamos getMovements
+import { getReportDataCloud, getBottles, getMovements } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
-import { BarChart3, Calendar, ChevronRight, Loader2 } from 'lucide-react'
+import { BarChart3, Calendar, ChevronRight, Loader2, ClipboardCheck, ShoppingBag } from 'lucide-react'
 import { Botella } from '@/lib/types'
 
-// IMPORTAMOS TUS COMPONENTES
+
 import { Metricas } from './reports/metricas'
 import { Auditoria } from './reports/auditoria'
 import { Arqueo } from './reports/arqueo'
 import { Precios } from './reports/precios' 
+import { AuditoriaView } from './reports/auditoriaView'
+import { VentasDetalleView } from './reports/ventasDetalleView' // ✅ Asegurate de que el archivo se llame así
 
 const getLocalDate = () => {
   const now = new Date();
@@ -23,7 +25,8 @@ export function ReportsView() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'owner'
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'audit' | 'cash' | 'prices'>(isAdmin ? 'metrics' : 'cash')
+  // ✅ Estado de pestañas actualizado
+  const [activeTab, setActiveTab] = useState<'metrics' | 'audit' | 'cash' | 'prices' | 'stock_control' | 'sales_detail'>(isAdmin ? 'metrics' : 'cash')
   const [startDate, setStartDate] = useState(() => getLocalDate())
   const [endDate, setEndDate] = useState(() => getLocalDate())
   
@@ -37,19 +40,16 @@ export function ReportsView() {
       const start = new Date(startDate + 'T00:00:00')
       const end = new Date(endDate + 'T23:59:59')
       
-      // 1. Cargamos botellas siempre
       const bottlesData = await getBottles()
       setBottles(bottlesData)
 
       let data;
-
-      if (activeTab === 'cash') {
-        // 🔥 SOLUCIÓN: Si la pestaña es Arqueo, ignoramos las fechas del calendario.
-        // Llamamos a getMovements() sin parámetros para que el store use el filtro isClosed == false
+      // 🔥 Pestañas que usan la jornada activa (isClosed == false)
+      if (activeTab === 'cash' || activeTab === 'stock_control' || activeTab === 'sales_detail') {
         const activeMoves = await getMovements() 
         data = { movements: activeMoves }
       } else {
-        // Para Auditoría, Métricas y Precios usamos el rango de fechas
+        // Pestañas históricas (Métricas, Auditoría General)
         data = await getReportDataCloud(start, end)
       }
       
@@ -61,7 +61,6 @@ export function ReportsView() {
     }
   }
 
-  // ✅ Agregamos activeTab a las dependencias para que refresque al cambiar de pestaña
   useEffect(() => { 
     generateReport() 
   }, [startDate, endDate, activeTab])
@@ -94,6 +93,22 @@ export function ReportsView() {
             )}
             {isAdmin && (
               <button 
+                onClick={() => setActiveTab('sales_detail')} 
+                className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === 'sales_detail' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
+              >
+                Detalle Ventas
+              </button>
+            )}
+            {isAdmin && (
+              <button 
+                onClick={() => setActiveTab('stock_control')} 
+                className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === 'stock_control' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
+              >
+                Control Stock
+              </button>
+            )}
+            {isAdmin && (
+              <button 
                 onClick={() => setActiveTab('audit')} 
                 className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
               >
@@ -109,9 +124,8 @@ export function ReportsView() {
           </div>
         </div>
 
-        {/* SELECTOR DE FECHAS - Se deshabilita visualmente si estamos en Arqueo */}
-        <div className={`flex items-center justify-center gap-2 bg-slate-900/50 p-2 rounded-[2rem] border-2 border-slate-800 w-full sm:w-auto transition-all ${activeTab === 'cash' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
-          <Calendar className="w-4 h-4 text-indigo-500 ml-1 md:ml-2" />
+        {/* SELECTOR DE FECHAS - Se deshabilita en vistas de tiempo real */}
+<div className={`flex items-center justify-center gap-2 bg-slate-900/50 p-2 rounded-[2rem] border-2 border-slate-800 w-full sm:w-auto transition-all ${['cash', 'stock_control'].includes(activeTab) ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>          <Calendar className="w-4 h-4 text-indigo-500 ml-1 md:ml-2" />
           <input 
             type="date" 
             value={startDate} 
@@ -135,20 +149,20 @@ export function ReportsView() {
         </div>
       ) : (
         <div className="min-h-[60vh] px-1">
-          {activeTab === 'metrics' && isAdmin && (
-            <Metricas reportData={reportData} />
-          )}
-
-          {activeTab === 'prices' && isAdmin && (
-            <Precios bottles={bottles} />
-          )}
-
-          {activeTab === 'audit' && isAdmin && (
-            <Auditoria movements={reportData?.movements || []} />
-          )}
-
+          {activeTab === 'metrics' && isAdmin && <Metricas reportData={reportData} />}
+          {activeTab === 'prices' && isAdmin && <Precios bottles={bottles} />}
+          {activeTab === 'audit' && isAdmin && <Auditoria movements={reportData?.movements || []} />}
+          
+          {/* ✅ NUEVAS VISTAS */}
+          {activeTab === 'stock_control' && isAdmin && <AuditoriaView />}
+{activeTab === 'sales_detail' && isAdmin && (
+  <VentasDetalleView 
+    startDate={startDate} 
+    endDate={endDate} 
+    reportData={reportData} 
+  />
+)}
           {activeTab === 'cash' && (
-            /* 🔥 LE PASAMOS LA FUNCIÓN PARA REFRESCAR DESPUÉS DE CERRAR JORNADA */
             <Arqueo 
               movements={reportData?.movements || []} 
               onAuditSuccess={generateReport} 

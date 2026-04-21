@@ -36,6 +36,9 @@ export interface Botella {
   mlPorUnidad: number       // Capacidad de la botella (750, 1000, 1500)
   stockMl: number           // Stock real en mililitros acumulados
   stockMinMl: number        // Alerta mínima en mililitros
+
+  stockInicialJornada?: number 
+  conteoFisicoReal?: number;
   graduacion?: number       // % Alcohol (opcional para botellas)
 
   // 🍹 Propiedades para TRAGOS / COMBOS
@@ -50,19 +53,21 @@ export interface Botella {
 // ✅ Movimientos de Stock
 export interface MovimientoStock {
   id: string
-  botellaId: string         // ID del producto vendido o ingresado
+  botellaId: string         
   nombreBotella: string
   tipo: 'entrada' | 'venta' | 'ajuste'
   
-  cantidad: number          // Cantidad de unidades (Botellas cerradas, Vasos o Combos)
+  cantidad: number          
   
-  monto: number             // Precio total de la transacción
-  costo: number             // Costo total para calcular ROI
+  monto: number             
+  valorCortesia?: number   
+  costo: number             
   
   usuarioId: string
   nombreUsuario: string
   notas?: string
   createdAt: string
+  isClosed: boolean         
 }
 
 // ✅ Alertas inteligentes
@@ -82,4 +87,20 @@ export interface EstadisticasDashboard {
   conteoStockBajo: number
   conteoSinStock: number
   revenueToday: number      // Ventas totales del día
+}
+
+
+export interface JornadaAudit {
+  id?: string;
+  fecha: string;            // ISO String
+  totalVendidos: number;    // Unidades totales vendidas esa noche
+  totalDiferencia: number;  // El desvío total (ej: -5.5 unidades)
+  productos: {
+    nombre: string;
+    inicial: number;
+    vendido: number;
+    esperado: number;
+    fisico: number;
+    diferencia: number;
+  }[];
 }

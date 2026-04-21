@@ -440,3 +440,77 @@ export function getPendingCount(): number {
   const pending = JSON.parse(localStorage.getItem('pending_movements') || '[]');
   return pending.length;
 }
+
+
+// Función para guardar los stocks iniciales de la jornada de forma masiva
+export async function saveMultipleInitialStocks(data: { id: string, initialStock: number }[]) {
+  const batch = writeBatch(db);
+  
+  try {
+    data.forEach(item => {
+      const botRef = doc(db, COL_BOTELLAS, item.id);
+      batch.update(botRef, {
+        stockInicialJornada: item.initialStock,
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error al guardar stocks iniciales:", error);
+    return false;
+  }
+}
+
+
+//-----------------------//
+
+// lib/store.ts
+
+
+export async function finalizarJornadaStock(detalleAudit: any[], fechaJornada: string) {
+  const batch = writeBatch(db);
+  
+  try {
+    // 1. Guardar el resumen en el Historial
+    const totalDiferencia = detalleAudit.reduce((acc, item) => acc + item.diferencia, 0);
+    const totalVendidos = detalleAudit.reduce((acc, item) => acc + item.vendidos, 0);
+    
+    await addDoc(collection(db, 'history_audits'), {
+      fechaCarga: new Date().toISOString(), // Cuándo se hizo el click (hoy)
+      fechaCorresponde: fechaJornada,       // A qué noche pertenece (ej: jueves pasado)
+      totalVendidos,
+      totalDiferencia,
+      productos: detalleAudit
+    });
+
+    // 2. Marcar movimientos como CERRADOS (isClosed: true)
+    const q = query(collection(db, 'movements'), where("isClosed", "==", false));
+    const snapMovs = await getDocs(q);
+
+    snapMovs.docs.forEach(m => {
+      batch.update(m.ref, { 
+        isClosed: true, 
+        closedAt: new Date().toISOString() 
+      });
+    });
+
+    // 3. Resetear campos de las botellas para la próxima noche
+    // OJO: Asegurate que el nombre de la colección sea 'botellas' o 'bottles' 
+    // según como lo tengas en el resto del código.
+    const botSnap = await getDocs(collection(db, 'botellas'));
+    botSnap.docs.forEach(b => {
+      batch.update(b.ref, { 
+        conteoFisicoReal: 0,
+        stockInicialJornada: 0 
+      });
+    });
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error al cerrar jornada:", error);
+    return false;
+  }
+}
